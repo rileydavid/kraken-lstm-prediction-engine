@@ -1,0 +1,15 @@
+[package]
+name = "collector"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+openssl = { version = "0.10", features = ["vendored"] } # needed for docker container -- comment out when running/building locally
+sqlx = { version = "0.7.1", features = [ "runtime-tokio-native-tls" , "postgres" , "bigdecimal", "chrono"] }
+tokio = { version = "1.20", features = ["full"] }
+tungstenite = { version = "0.20.0", features = ["rustls-tls-native-roots"] }
+chrono = "0.4.30"
+anyhow = "1.0.75"
+serde_json = "1.0.106"

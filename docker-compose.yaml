@@ -1,0 +1,79 @@
+version: '3.8'
+
+networks:
+  network:
+    ipam:
+      config:
+        - subnet: 172.1.0.0/16
+          
+services: 
+  timescaledb:
+    image: timescale/timescaledb-ha:pg15-latest
+    container_name: timescaledb
+    ports:
+      - "5432:5432"
+    networks:
+      network:
+        ipv4_address: 172.1.0.10
+    restart: always
+    environment:
+      POSTGRES_DB: 'db'
+      POSTGRES_USER: 'admin'
+      POSTGRES_PASSWORD: 'password'
+      PGDATA: '/pg-data'
+    volumes:
+      - ./data/timescale:/pg-data
+      - ./data/:/import/
+      - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+
+  pgadmin4: 
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    restart: always
+    ports:
+      - "5050:80"
+    networks:
+      network:
+        ipv4_address: 172.1.0.11
+    environment:
+      PGADMIN_DEFAULT_EMAIL: 'rileydavid@live.at'
+      PGADMIN_DEFAULT_PASSWORD: 'password'
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
+      
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      GF_SECURITY_ADMIN_USER: 'admin'
+      GF_SECURITY_ADMIN_PASSWORD: 'password' #default is admin/admin 
+      GF_PATHS_CONFIG: '/etc/grafana/custom.ini'
+    networks:
+      network:
+        ipv4_address: 172.1.0.12
+    volumes: 
+      - ./data/grafana:/var/lib/grafana
+      - ./data/grafana/config/defaults.ini:/etc/grafana/custom.ini
+    user: "472"
+    
+  collector:
+    build: ./collector
+    container_name: collector
+    restart: always
+    networks:
+      network:
+        ipv4_address: 172.1.0.13
+
+  converter: 
+    build: ./converter
+    container_name: converter
+    restart: no
+    volumes:
+      - ./data/:/data
+    networks:
+      network:
+        ipv4_address: 172.1.0.99
+

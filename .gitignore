@@ -14,3 +14,9 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+# docker data 
+/data/data
+/data/grafana
+/data/pgadmin
+/data/timescale
+
