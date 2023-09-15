@@ -21,6 +21,8 @@ services:
       POSTGRES_USER: 'admin'
       POSTGRES_PASSWORD: 'password'
       PGDATA: '/pg-data'
+      TZ: 'GMT+0'
+      PGTZ: 'GMT+0'
     volumes:
       - ./data/timescale:/pg-data
       - ./data/:/import/

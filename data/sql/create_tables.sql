@@ -1,13 +1,12 @@
 
 CREATE TABLE IF NOT EXISTS kraken_trade (
     time TIMESTAMP NOT NULL,
-    price NUMERIC NOT NULL,  -- change to numeric?  
-    volume NUMERIC NOT NULL, -- change to numeric?
+    price NUMERIC NOT NULL,  
+    volume NUMERIC NOT NULL, 
     side VARCHAR(1),
     order_type VARCHAR(1),
     symbol VARCHAR(14) NOT NULL -- One more just in case
 );
-
 
 SELECT create_hypertable('kraken_trade', 'time', migrate_data => true);
 
