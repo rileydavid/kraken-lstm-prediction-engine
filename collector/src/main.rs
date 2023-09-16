@@ -32,7 +32,7 @@ impl Trade {
             .to_string()
             .parse::<i32>()
             .unwrap();
-        let symbol = json_value.get(3).unwrap().as_str().unwrap();
+        let symbol = json_value.get(3).unwrap().as_str().unwrap().replace("/", "");
 
         let mut trades = Vec::new();
 
@@ -49,7 +49,7 @@ impl Trade {
                         trade_array.get(1).unwrap().as_str().unwrap(),
                         trade_array.get(3).unwrap().as_str().unwrap(),
                         trade_array.get(4).unwrap().as_str().unwrap(),
-                        symbol,
+                        &symbol,
                     ));
                 }
             }
@@ -106,9 +106,11 @@ async fn main() -> Result<(), Error> {
     let mut socket = get_socket().0;
 
     let subscriptions = vec![
-        "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"ETH/USD\"]}",
         "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"XRP/USD\"]}",
+        /*
+        "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"ETH/USD\"]}",
         "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"XBT/USD\"]}",
+         */
     ];
 
     // subscribe
@@ -143,7 +145,7 @@ async fn main() -> Result<(), Error> {
 async fn get_pool() -> Result<PgPool, sqlx::Error> {
     //172.1.0.10
     return PgPoolOptions::new()
-        .max_connections(1)
+        .max_connections(5)
         .connect("postgres://admin:password@172.1.0.10:5432/db")
         .await;
 }

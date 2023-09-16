@@ -1,5 +1,8 @@
 DEV TODOS: 
 
+
+Update the converter --> to set up one_min_candle etc
+
 Update Database Create statements to reflect changes made in the Collector
     - Create materialized views
     - Auto aggregates for 
@@ -11,9 +14,8 @@ Implement linear regression
 Check if converter converts the timestamp correctly
 
 
-
-
-
+Backend and simple charts javascript dashboard? 
+Grafana not performing well in my opinion 
 
 
 SELECT * FROM kraken_candlestick_day

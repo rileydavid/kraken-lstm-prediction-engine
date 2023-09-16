@@ -1,52 +1,28 @@
 
 CREATE TABLE IF NOT EXISTS kraken_trade (
-    time TIMESTAMP NOT NULL,
+    time TIMESTAMPTZ NOT NULL,
     price NUMERIC NOT NULL,  
     volume NUMERIC NOT NULL, 
-    side VARCHAR(1),
-    order_type VARCHAR(1),
-    symbol VARCHAR(14) NOT NULL -- One more just in case
+    side TEXT,
+    order_type TEXT,
+    symbol TEXT NOT NULL -- One more just in case
 );
 
-SELECT create_hypertable('kraken_trade', 'time', migrate_data => true);
+ALTER TABLE kraken_trade  SET UNLOGGED;
 
-CREATE INDEX kraken_symbol_time ON kraken_trade (symbol, time DESC);
+
+ -- CREATE INDEX idx_kraken_symbol_time ON kraken_trade (symbol, time DESC);
+
+ -- SELECT create_hypertable('kraken_trade', 'time', migrate_data => true);
 
 -- one minute candles 
-CREATE MATERIALIZED VIEW one_min_candle
-WITH (timescaledb.continuous) AS
-SELECT
-  time_bucket('1 min', "time") AS bucket,
-  max(price) AS high,
-  first(price, time) AS open,
-  last(price, time) AS close,
-  min(price) AS low,
-  symbol
-FROM kraken_trade
-GROUP BY bucket, symbol;
 
-SELECT add_continuous_aggregate_policy('one_min_candle',
-    start_offset => INTERVAL '3 min',
-    end_offset => INTERVAL '1 min',
-    schedule_interval => INTERVAL '1 min');
 
--- one day candles
-CREATE MATERIALIZED VIEW one_day_candle
-WITH (timescaledb.continuous) AS
-SELECT
-  time_bucket('1 day', "time") AS bucket,
-  max(price) AS high,
-  first(price, time) AS open,
-  last(price, time) AS close,
-  min(price) AS low,
-  symbol
-FROM kraken_trade
-GROUP BY bucket, symbol;
 
-SELECT add_continuous_aggregate_policy('one_day_candle',
-    start_offset => INTERVAL '3 day', -- might not be enough if data is importet --> find way to manually refresh
-    end_offset => INTERVAL '1 day',
-    schedule_interval => INTERVAL '1 day');
+
+
+
+
 
 -- Grafana select to show candle 
 --SELECT * FROM kraken_candlestick_day WHERE symbol = 'ETHUSD' AND bucket >= NOW() - INTERVAL '2 years' ORDER BY bucket;
