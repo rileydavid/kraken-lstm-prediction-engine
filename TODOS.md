@@ -1,5 +1,6 @@
 DEV TODOS: 
 
+Good: sqlx migrate run --database-url postgres://admin:password@localhost:5432/db
 
 Update the converter --> to set up one_min_candle etc
 

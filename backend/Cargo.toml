@@ -1,0 +1,20 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.4.0"
+derive_more = "0.99.17"
+env_logger = "0.10.0"
+log = "0.4.20"
+serde = {version="1.0.188", features = ["derive"]}
+strum_macros = "^0.25.2"
+strum = { version = "^0.25.0", features = ["derive"] }
+chrono = {version = "0.4.31",features = ["serde"]}
+
+sqlx = { version = "0.7.1", features = [ "runtime-tokio-native-tls" , "postgres" , "bigdecimal", "chrono"] }
+tokio = { version = "1.20", features = ["full"] }
+bigdecimal = {version = "0.4.1", features = ["serde"]} # not suer if needed
