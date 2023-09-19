@@ -2,14 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { AppComponent } from './app.component';
 import { NgApexchartsModule } from 'ng-apexcharts';
-import * as ApexCharts from 'apexcharts';
+import { HttpClientModule } from '@angular/common/http';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
         RouterTestingModule,
-        NgApexchartsModule
+        NgApexchartsModule,
+        HttpClientModule
       ],
       declarations: [
         AppComponent
