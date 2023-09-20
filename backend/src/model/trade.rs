@@ -2,10 +2,8 @@ use std::str::FromStr;
 
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, TimeZone};
-use log::info;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-//use strum_macros::{EnumString, Display};
 
 #[derive(Serialize, sqlx::FromRow, Deserialize, Debug, Clone)]
 pub struct Trade {

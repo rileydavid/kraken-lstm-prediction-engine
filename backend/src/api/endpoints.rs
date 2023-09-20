@@ -47,7 +47,7 @@ impl ResponseError for ApiError {
     }
 }
 
-
+/*
 #[get("/web")]
 pub async fn get_web(
     websocket: Data<Websocket>,
@@ -57,7 +57,20 @@ pub async fn get_web(
         None => Err(ApiError::BadRequest),
     }
 }
+ */
 
+/*
+pub async fn start_kraken_websocket (
+    websocket: Data<Websocket>,
+) -> Result<Json<String>, ApiError> {
+    match websocket.start_kraken_websocket().await {
+        Some(response) => Ok(Json(response)),
+        None => Err(ApiError::BadRequest),
+    }
+}
+ */
+
+/*
 #[get("/close_websocket")]
 pub async fn close_websocket(
     websocket: Data<Websocket>,
@@ -67,7 +80,7 @@ pub async fn close_websocket(
         None => Err(ApiError::BadRequest),
     }
 }
-
+ */
 
 #[get("/symbols")]
 pub async fn get_symbols(

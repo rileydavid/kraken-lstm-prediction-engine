@@ -39,9 +39,9 @@ impl PostgresRepository {
         return None;
     }
 
-    pub async fn insert_trade(&self, trade: &Trade) -> sqlx::postgres::PgQueryResult {
+    pub async fn insert_trade(&self, trade: &Trade) {
         // maybe there is a better way to convert the bigdecimal 
-        sqlx::query("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
+        let result = sqlx::query("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
         .bind(&trade.time)
         .bind(sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap())
         .bind(sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap())
@@ -49,8 +49,11 @@ impl PostgresRepository {
         .bind(&trade.order_type)
         .bind(&trade.symbol)
         .execute(&self.pool)
-        .await.expect("Error")
+        .await;
 
+        if result.is_err() {
+            error!("Error whilst inserting Trade");
+        }
     }
 
     // interval in minutes

@@ -1,44 +1,77 @@
+use super::postgresdb::PostgresRepository;
 use crate::model::trade::Trade;
 use crate::repository::websocket::rt::task::JoinHandle;
-use std::sync::{Arc, Mutex};
-use serde_json::Value;
 use actix_web::rt;
-use log::info;
+use chrono::{DateTime, Utc};
+use log::{error, info};
+use serde_json::Value;
+use sqlx::{Acquire, PgPool};
+use std::{
+    str::FromStr,
+    sync::{Arc, Mutex}, result,
+};
 use tungstenite::{connect, Message};
-use super::postgresdb::PostgresRepository;
 
 // maybe think about combining Collector with postgres
 
+
+#[derive(Clone)]
 pub struct Websocket {
-    thread_handle: JoinHandle<Result<String, Box<dyn std::error::Error>>>,
+    //thread_handle: Arc<Mutex<Option<JoinHandle<Result<String, Box<dyn std::error::Error>>>>>>,
+    //pool: PgPool,
     data: Arc<Mutex<Vec<Trade>>>, //not in use yet
 }
 
 impl Websocket {
-    pub fn init(db: PostgresRepository) -> Websocket {
+    pub fn init(pool: PgPool) -> Websocket {
         let data = Arc::new(Mutex::new(Vec::new()));
-        let handle = rt::spawn(Self::socket_loop(data.clone(), db));
-        
+        let _handle = rt::spawn(Self::socket_loop(data.clone(), pool));
+
         return Websocket {
-            thread_handle: handle,
+            //thread_handle: Arc::new(Mutex::new(None)),
             data: data,
         };
     }
 
-    pub async fn get_web_data(&self) -> Option<String> {
-        info!("{:?}", self.data.lock().unwrap());
-        return Some(String::from("Ok"));
+    /*
+    pub async fn start_kraken_websocket(self) -> Option<String> {
+        //info!("{:?}", self.data.lock().unwrap());
+
+        let handle_mut = self.thread_handle.lock().unwrap().as_mut();
+
+        if handle_mut.is_none() == true {
+            drop(handle_mut);
+            let handle = rt::spawn(Self::socket_loop(self.data.clone(), self.pool.clone()));
+            self.thread_handle = Arc::new(Mutex::new(Some(handle)));
+        }
+        
+        
+        return Some(String::from("Websocket started"));
     }
 
-    pub async fn close_websocket(&self) -> Option<String> {
+    
+    pub async fn close_websocket(self) -> Option<String> {
         // kinda rough
-        self.thread_handle.abort();
+        if self.thread_handle.is_some() {
+            self.thread_handle?.abort();
+        }
         return Some(String::from("Ok"));
     }
+    
+    
+ */
+    /*
+    pub fn insert_trade(trade: &Trade, pool: PgPool) {
+        // maybe there is a better way to convert the bigdecimal
+        while pool.num_idle() != 0 {
+            let _ = 
+        }
+    }
+     */
 
     async fn socket_loop(
-        _data: Arc<Mutex<Vec<Trade>>>, //for later 
-        db: PostgresRepository,
+        _data: Arc<Mutex<Vec<Trade>>>, //for later
+        pool: PgPool,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut socket = connect("wss://ws.kraken.com").expect("Could not connect").0;
 
@@ -69,10 +102,21 @@ impl Websocket {
                 }
             }
 
-            if cache.len() > 10 {
+            if cache.len() >= 10 {
                 let count = cache.len();
                 for trade in cache.iter() {
-                    let _ = db.insert_trade(trade).await; // error could happend whilst inserting (ignored at the moment)
+                    let result = sqlx::query("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
+                    .bind(&trade.time)
+                    .bind(sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap())
+                    .bind(sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap())
+                    .bind(&trade.side)
+                    .bind(&trade.order_type)
+                    .bind(&trade.symbol)
+                    .execute(&pool).await;
+                    
+                    if result.is_err() {
+                        error!("Insert Failed");
+                    }
                 }
                 //data.lock().unwrap().extend(cache.clone()); // Transfer the new trades to the shared data
                 cache.clear();
