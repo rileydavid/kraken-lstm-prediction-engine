@@ -1,1 +1,1 @@
-pub mod trade;
+pub mod endpoints;
