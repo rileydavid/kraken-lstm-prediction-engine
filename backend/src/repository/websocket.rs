@@ -1,38 +1,45 @@
 use super::postgresdb::PostgresRepository;
 use crate::model::trade::Trade;
 use crate::repository::websocket::rt::task::JoinHandle;
-use actix_web::rt;
+use actix_web::{rt, 
+web::Data};
+
 use chrono::{DateTime, Utc};
 use log::{error, info};
 use serde_json::Value;
 use sqlx::{Acquire, PgPool};
 use std::{
     str::FromStr,
-    sync::{Arc, Mutex}, result,
+    sync::{Arc, Mutex}, result, cell::Cell,
 };
 use tungstenite::{connect, Message};
 
 // maybe think about combining Collector with postgres
 
-
 #[derive(Clone)]
-pub struct Websocket {
-    //thread_handle: Arc<Mutex<Option<JoinHandle<Result<String, Box<dyn std::error::Error>>>>>>,
+pub struct Collector {
+    //thread_handle: Cell<JoinHandle<Result<String, Box<dyn std::error::Error>>>,
     //pool: PgPool,
     data: Arc<Mutex<Vec<Trade>>>, //not in use yet
 }
 
-impl Websocket {
-    pub fn init(pool: PgPool) -> Websocket {
+impl Collector {
+    pub fn init(pool: PgPool) -> Collector {
         let data = Arc::new(Mutex::new(Vec::new()));
+
+        // thread will run until the webserver crashes
         let _handle = rt::spawn(Self::socket_loop(data.clone(), pool));
 
-        return Websocket {
+        return Collector {
             //thread_handle: Arc::new(Mutex::new(None)),
             data: data,
         };
     }
-
+    
+    // maybe use this to process insertions
+    //pub fn test(db: Data<PostgresRepository>){}
+    
+    
     /*
     pub async fn start_kraken_websocket(self) -> Option<String> {
         //info!("{:?}", self.data.lock().unwrap());
@@ -116,6 +123,7 @@ impl Websocket {
                     
                     if result.is_err() {
                         error!("Insert Failed");
+
                     }
                 }
                 //data.lock().unwrap().extend(cache.clone()); // Transfer the new trades to the shared data

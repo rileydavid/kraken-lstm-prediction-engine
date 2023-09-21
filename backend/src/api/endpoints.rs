@@ -1,6 +1,6 @@
 use crate::model::{ohlc::Ohlc, trade::Trade};
 use crate::repository::postgresdb::PostgresRepository;
-use crate::repository::websocket::Websocket;
+use crate::repository::websocket::Collector;
 
 
 use actix_web::{
