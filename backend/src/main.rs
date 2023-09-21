@@ -3,10 +3,10 @@ mod model;
 mod repository;
 
 use actix_cors::Cors;
-use api::endpoints::{get_trades, get_ohlc, get_symbols};
+use api::endpoints::{get_trades, get_ohlc, get_symbols, close_websocket};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use repository::postgresdb::PostgresRepository;
-use repository::websocket::Collector;
+use repository::collector::Collector;
 use sqlx::postgres::PgPoolOptions;
 
 #[actix_web::main]
@@ -40,7 +40,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     // this seems to work
-    let websocket_repository = Collector::init(pool_websocket.clone());
+    let collector_repository = Collector::init(pool_websocket.clone());
     
     HttpServer::new(move || {
         let logger = Logger::default();
@@ -50,20 +50,18 @@ async fn main() -> std::io::Result<()> {
         let postgres_data = Data::new(postgres_repository);
 
         // Currently not working because the webserver instantiates this 4 times 
-        let websocket_data = Data::new(websocket_repository.clone());
+        let collector_data = Data::new(collector_repository.clone());
      
         App::new()
             .wrap(cors)
             .wrap(logger)
-            //.wrap(websocket_repository)
-            //.app_data(websocket_data)
             .app_data(postgres_data)
-            .app_data(websocket_data)
+            .app_data(collector_data)
             .service(get_trades)
             .service(get_ohlc)
             .service(get_symbols)
             //.service(get_web)
-            //.service(close_websocket)
+            .service(close_websocket)
     })
     .bind((std::env::var("WEBSERVER_IP").unwrap(), 8000))?
     .run()

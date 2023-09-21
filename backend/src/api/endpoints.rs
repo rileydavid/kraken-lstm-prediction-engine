@@ -1,6 +1,6 @@
 use crate::model::{ohlc::Ohlc, trade::Trade};
 use crate::repository::postgresdb::PostgresRepository;
-use crate::repository::websocket::Collector;
+use crate::repository::collector::Collector;
 
 
 use actix_web::{
@@ -70,17 +70,17 @@ pub async fn start_kraken_websocket (
 }
  */
 
-/*
+
 #[get("/close_websocket")]
 pub async fn close_websocket(
-    websocket: Data<Websocket>,
+    collector: Data<Collector>,
 ) -> Result<Json<String>, ApiError> {
-    match websocket.close_websocket().await {
+    match collector.close_websocket().await {
         Some(response) => Ok(Json(response)),
         None => Err(ApiError::BadRequest),
     }
 }
- */
+
 
 #[get("/symbols")]
 pub async fn get_symbols(

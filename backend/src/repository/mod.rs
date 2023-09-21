@@ -1,2 +1,2 @@
 pub mod postgresdb;
-pub mod websocket;
+pub mod collector;

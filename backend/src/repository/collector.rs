@@ -1,16 +1,12 @@
-use super::postgresdb::PostgresRepository;
 use crate::model::trade::Trade;
-use crate::repository::websocket::rt::task::JoinHandle;
-use actix_web::{rt, 
-web::Data};
+use actix_web::rt;
 
-use chrono::{DateTime, Utc};
 use log::{error, info};
 use serde_json::Value;
-use sqlx::{Acquire, PgPool};
+use sqlx::PgPool;
 use std::{
     str::FromStr,
-    sync::{Arc, Mutex}, result, cell::Cell,
+    sync::{Arc, Mutex}
 };
 use tungstenite::{connect, Message};
 
@@ -18,22 +14,30 @@ use tungstenite::{connect, Message};
 
 #[derive(Clone)]
 pub struct Collector {
-    //thread_handle: Cell<JoinHandle<Result<String, Box<dyn std::error::Error>>>,
-    //pool: PgPool,
-    data: Arc<Mutex<Vec<Trade>>>, //not in use yet
+    thread_info: ThreadInfo
+    //data: Arc<Mutex<Vec<Trade>>>
+}
+
+// used to terminate websocket connections
+#[derive(Clone)]
+pub struct ThreadInfo {
+    terminate_flag: Arc<Mutex<bool>>,
 }
 
 impl Collector {
     pub fn init(pool: PgPool) -> Collector {
         let data = Arc::new(Mutex::new(Vec::new()));
 
-        // thread will run until the webserver crashes
-        let _handle = rt::spawn(Self::socket_loop(data.clone(), pool));
-
-        return Collector {
-            //thread_handle: Arc::new(Mutex::new(None)),
-            data: data,
+        let thread_info = ThreadInfo {
+            terminate_flag: Arc::new(Mutex::new(false))
         };
+
+        // thread will run until the webserver crashes or the terminate flag is set
+        let _handle = rt::spawn(Self::socket_loop(data.clone(), pool, thread_info.clone()));
+    
+        return Collector{
+            thread_info: thread_info
+        }
     }
     
     // maybe use this to process insertions
@@ -41,10 +45,11 @@ impl Collector {
     
     
     /*
+    
     pub async fn start_kraken_websocket(self) -> Option<String> {
         //info!("{:?}", self.data.lock().unwrap());
 
-        let handle_mut = self.thread_handle.lock().unwrap().as_mut();
+        let _handle = rt::spawn(Self::socket_loop(data.clone(), pool, thread_info.clone()));
 
         if handle_mut.is_none() == true {
             drop(handle_mut);
@@ -55,31 +60,26 @@ impl Collector {
         
         return Some(String::from("Websocket started"));
     }
-
+ 
+  */
     
-    pub async fn close_websocket(self) -> Option<String> {
+
+    pub async fn close_websocket(&self) -> Option<String> {
         // kinda rough
-        if self.thread_handle.is_some() {
-            self.thread_handle?.abort();
-        }
+        *self.thread_info.terminate_flag.lock().unwrap() = true;
+        //*test = true;
+        //let t = self.thread_info.terminate_flag.get_mut()
         return Some(String::from("Ok"));
     }
-    
-    
- */
-    /*
-    pub fn insert_trade(trade: &Trade, pool: PgPool) {
-        // maybe there is a better way to convert the bigdecimal
-        while pool.num_idle() != 0 {
-            let _ = 
-        }
-    }
-     */
 
+
+
+    //TODO break this function up into smaller parts
     async fn socket_loop(
         _data: Arc<Mutex<Vec<Trade>>>, //for later
         pool: PgPool,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+        thread_info: ThreadInfo
+    ) -> Option<()> {
         let mut socket = connect("wss://ws.kraken.com").expect("Could not connect").0;
 
         let subscriptions = vec![
@@ -90,7 +90,13 @@ impl Collector {
 
         // subscribe
         for msg in subscriptions {
-            socket.send(Message::Text(msg.into()))?;
+            match socket.send(Message::Text(msg.into())) {
+                Ok(it) => it,
+                Err(err) => {
+                    error!("error whilst subscribing");
+                    return None
+                },
+            };
         }
 
         let mut cache: Vec<Trade> = Vec::new(); // cache --> insert trades in batches
@@ -129,7 +135,13 @@ impl Collector {
                 //data.lock().unwrap().extend(cache.clone()); // Transfer the new trades to the shared data
                 cache.clear();
                 info!("Inserted {:?} Trades", count);
-            }
+
+                // terminates the thread
+                if thread_info.terminate_flag.lock().unwrap().to_owned() {
+                    info!("Returning from thread");
+                    return None;
+                }
+            }           
         }
     }
 }
