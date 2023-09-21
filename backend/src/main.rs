@@ -3,7 +3,7 @@ mod model;
 mod repository;
 
 use actix_cors::Cors;
-use api::endpoints::{get_trades, get_ohlc, get_symbols, close_websocket};
+use api::endpoints::{get_trades, get_ohlc, get_symbols, close_websocket, get_cache};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use repository::postgresdb::PostgresRepository;
 use repository::collector::Collector;
@@ -60,7 +60,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_trades)
             .service(get_ohlc)
             .service(get_symbols)
-            //.service(get_web)
+            .service(get_cache)
             .service(close_websocket)
     })
     .bind((std::env::var("WEBSERVER_IP").unwrap(), 8000))?

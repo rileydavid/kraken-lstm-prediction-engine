@@ -21,7 +21,7 @@ pub struct Interval {
     interval: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Symbol {
     symbol: String,
 }
@@ -47,17 +47,18 @@ impl ResponseError for ApiError {
     }
 }
 
-/*
-#[get("/web")]
-pub async fn get_web(
-    websocket: Data<Websocket>,
-) -> Result<Json<String>, ApiError> {
-    match websocket.get_web_data().await {
+
+#[get("/cached/{symbol}")]
+pub async fn get_cache(
+    collector: Data<Collector>,
+    symbol: Path<Symbol>
+) -> Result<Json<Vec<Trade>>, ApiError> {
+    match collector.get_cache(&symbol.symbol).await {
         Some(response) => Ok(Json(response)),
         None => Err(ApiError::BadRequest),
     }
 }
- */
+
 
 /*
 pub async fn start_kraken_websocket (

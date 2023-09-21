@@ -10,12 +10,15 @@ use std::{
 };
 use tungstenite::{connect, Message};
 
+use moka::sync::Cache;
+use std::time::Duration;
+
 // maybe think about combining Collector with postgres
 
 #[derive(Clone)]
 pub struct Collector {
-    thread_info: ThreadInfo
-    //data: Arc<Mutex<Vec<Trade>>>
+    thread_info: ThreadInfo,
+    data_pool: Cache<String, Trade>
 }
 
 // used to terminate websocket connections
@@ -32,17 +35,20 @@ impl Collector {
             terminate_flag: Arc::new(Mutex::new(false))
         };
 
-        // thread will run until the webserver crashes or the terminate flag is set
-        let _handle = rt::spawn(Self::socket_loop(data.clone(), pool, thread_info.clone()));
+        let cache: Cache<String, Trade> = Cache::builder()
+        // Time to live (TTL): 60 minutes
+        .time_to_live(Duration::from_secs(60 * 60))
+        .build();
+
+
+       // thread will run until the webserver crashes or the terminate flag is set
+        let _handle = rt::spawn(Self::kraken_socket_loop(data.clone(), pool, thread_info.clone(), cache.clone()));
     
         return Collector{
-            thread_info: thread_info
+            thread_info: thread_info,
+            data_pool: cache
         }
     }
-    
-    // maybe use this to process insertions
-    //pub fn test(db: Data<PostgresRepository>){}
-    
     
     /*
     
@@ -63,9 +69,21 @@ impl Collector {
  
   */
     
+    //TODO: Add interval
+    pub async fn get_cache(&self, symbol: &str) -> Option<Vec<Trade>> {
+        let mut trades: Vec<Trade> = Vec::new();
+
+        for key_value_pair in self.data_pool.iter() {
+            if key_value_pair.0.to_string().contains(&symbol){
+                trades.push(key_value_pair.1);
+            }
+        }
+        return Some(trades);
+    }
+
+
 
     pub async fn close_websocket(&self) -> Option<String> {
-        // kinda rough
         *self.thread_info.terminate_flag.lock().unwrap() = true;
         //*test = true;
         //let t = self.thread_info.terminate_flag.get_mut()
@@ -73,13 +91,14 @@ impl Collector {
     }
 
 
-
     //TODO break this function up into smaller parts
-    async fn socket_loop(
+    async fn kraken_socket_loop(
         _data: Arc<Mutex<Vec<Trade>>>, //for later
         pool: PgPool,
-        thread_info: ThreadInfo
+        thread_info: ThreadInfo,
+        data_pool: Cache<String, Trade>
     ) -> Option<()> {
+
         let mut socket = connect("wss://ws.kraken.com").expect("Could not connect").0;
 
         let subscriptions = vec![
@@ -100,6 +119,7 @@ impl Collector {
         }
 
         let mut cache: Vec<Trade> = Vec::new(); // cache --> insert trades in batches
+        let mut serial: i16 = 0;
 
         loop {
             if socket.can_read() {
@@ -127,14 +147,22 @@ impl Collector {
                     .bind(&trade.symbol)
                     .execute(&pool).await;
                     
+                    
+                    data_pool.insert(trade.symbol.to_owned() + &serial.to_string(), trade.to_owned());
+                    serial += 1;
+
                     if result.is_err() {
                         error!("Insert Failed");
-
                     }
                 }
                 //data.lock().unwrap().extend(cache.clone()); // Transfer the new trades to the shared data
                 cache.clear();
                 info!("Inserted {:?} Trades", count);
+
+                //reset serial - this would allow a maximum of 500 data entries per minute
+                if serial > 30000 { 
+                    serial = 0;
+                }
 
                 // terminates the thread
                 if thread_info.terminate_flag.lock().unwrap().to_owned() {
