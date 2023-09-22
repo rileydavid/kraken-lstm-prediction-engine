@@ -3,7 +3,8 @@ use std::str::FromStr;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, TimeZone};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
+use strum_macros::ToString;
 
 #[derive(Serialize, sqlx::FromRow, Deserialize, Debug, Clone)]
 pub struct Trade {
@@ -66,8 +67,20 @@ impl Trade {
         return Some(trades);
     }
 
+    pub fn to_json(&self) -> serde_json::Value {
+        json!({
+            "time": self.time.to_rfc3339(),
+            "price": self.price.to_string(),
+            "volume": self.volume.to_string(),
+            "side": &self.side,
+            "order_type": &self.order_type,
+            "symbol": &self.symbol,
+        })
+    }
+
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
         let epoch_seconds: f64 = timestamp.parse().expect("Failed to parse epoch seconds");
         return Utc.timestamp_opt(epoch_seconds as i64, (epoch_seconds.fract() * 1_000_000.0) as u32).unwrap();
     }
+
 }

@@ -3,11 +3,15 @@ mod model;
 mod repository;
 
 use actix_cors::Cors;
-use api::endpoints::{get_trades, get_ohlc, get_symbols, close_websocket, get_cache};
+
+use api::endpoints::{get_trades, get_ohlc, get_symbols, close_websocket, get_cached_trades, get_cached_trades_prediction ,new_prediction, websocket};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use repository::postgresdb::PostgresRepository;
 use repository::collector::Collector;
+
 use sqlx::postgres::PgPoolOptions;
+
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -41,8 +45,10 @@ async fn main() -> std::io::Result<()> {
 
     // this seems to work
     let collector_repository = Collector::init(pool_websocket.clone());
+
+    let handle_collector = collector_repository.clone();
     
-    HttpServer::new(move || {
+    let _ = HttpServer::new(move || {
         let logger = Logger::default();
         let cors = Cors::permissive(); // should not be used in production code 
 
@@ -60,10 +66,20 @@ async fn main() -> std::io::Result<()> {
             .service(get_trades)
             .service(get_ohlc)
             .service(get_symbols)
-            .service(get_cache)
+            .service(get_cached_trades)
+            .service(get_cached_trades_prediction)
             .service(close_websocket)
+            .service(new_prediction)
+            .service(websocket)
+            //.service(web::resource("/ws").route(web::get().to(websocket)))
     })
     .bind((std::env::var("WEBSERVER_IP").unwrap(), 8000))?
     .run()
-    .await
+    .await;
+
+    // shutdown websocket thread not working 
+    let _ = handle_collector.close_websocket();
+
+    return Ok(());
+
 }

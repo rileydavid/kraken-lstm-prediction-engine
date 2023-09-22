@@ -1,19 +1,24 @@
 use crate::model::{ohlc::Ohlc, trade::Trade};
 use crate::repository::postgresdb::PostgresRepository;
 use crate::repository::collector::Collector;
+use crate::repository::provider::Provider;
 
-
+use actix_web::{web, HttpRequest};
 use actix_web::{
     error::ResponseError,
     get,
+    post,
     http::{header::ContentType, StatusCode},
     web::Data,
     web::Json,
     web::Path,
     HttpResponse,
+    Error
 };
 
+use actix_web_actors::ws;
 use derive_more::Display;
+use log::info;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -47,13 +52,44 @@ impl ResponseError for ApiError {
     }
 }
 
+#[get("/ws")]
+pub async fn websocket(req: HttpRequest, stream: web::Payload, collector: Data<Collector>) -> Result<HttpResponse, Error> {
+    ws::start(Provider::new(collector), &req, stream)
+}
 
-#[get("/cached/{symbol}")]
-pub async fn get_cache(
+#[post("/prediction")]
+pub async fn new_prediction(
     collector: Data<Collector>,
-    symbol: Path<Symbol>
+    db: Data<PostgresRepository>,
+    trade: web::Json<Trade>
+) -> Result<Json<String>, ApiError> {
+    match collector.post_trade_prediction(trade.0.clone(), db, collector.clone()).await {
+        Some(response) => Ok(Json(response)),
+        None => Err(ApiError::BadRequest),
+    }
+}
+
+
+#[get("/cached_trades/{symbol}/{interval}")]
+pub async fn get_cached_trades(
+    collector: Data<Collector>,
+    symbol: Path<Symbol>,
+    interval: Path<Interval>
 ) -> Result<Json<Vec<Trade>>, ApiError> {
-    match collector.get_cache(&symbol.symbol).await {
+    match collector.get_cache(&symbol.symbol, &interval.interval).await {
+        Some(response) => Ok(Json(response)),
+        None => Err(ApiError::BadRequest),
+    }
+}
+
+
+#[get("/cached_prediction/{symbol}/{interval}")]
+pub async fn get_cached_trades_prediction(
+    collector: Data<Collector>,
+    symbol: Path<Symbol>,
+    interval: Path<Interval>
+) -> Result<Json<Vec<Trade>>, ApiError> {
+    match collector.get_cached_trades_prediction(&symbol.symbol, &interval.interval).await {
         Some(response) => Ok(Json(response)),
         None => Err(ApiError::BadRequest),
     }
