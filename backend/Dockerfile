@@ -23,6 +23,6 @@ WORKDIR /backend
 
 COPY --from=builder /backend/target/x86_64-unknown-linux-musl/release/backend ./
 
-EXPOSE 8080
+EXPOSE 8000
 
 CMD ["/backend/backend"]

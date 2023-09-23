@@ -16,16 +16,19 @@ use tungstenite::{connect, Message};
 use moka::sync::Cache;
 use std::time::Duration;
 
-use super::postgresdb::PostgresRepository;
+use super::{postgresdb::PostgresRepository, cachemanager::CacheManager};
 
 // maybe think about combining Collector with postgres
 
 #[derive(Clone)]
 pub struct Collector {
     thread_info: ThreadInfo,
+    cache_manager: CacheManager
+    /*
     pub cache_trade: Cache<String, Trade>,
     pub cache_trade_prediction: Cache<String, Trade>,
     pub cache_serial: Cache<String, i16>
+     */
 }
 
 // used to terminate websocket connections
@@ -35,10 +38,11 @@ pub struct ThreadInfo {
 }
 
 impl Collector {
-    pub fn init(pool: PgPool) -> Collector {
+    pub fn init(pool: PgPool, cache_manager: CacheManager) -> Collector {
         let thread_info = ThreadInfo {
             terminate_flag: Arc::new(Mutex::new(false)),
         };
+
 
         let cache_trade: Cache<String, Trade> = Cache::builder()
             .time_to_live(Duration::from_secs(60 * 60)) // Time to live (TTL): 60 minutes
@@ -59,15 +63,21 @@ impl Collector {
         let _handle = rt::spawn(Self::kraken_socket_loop(
             pool,
             thread_info.clone(),
+            cache_manager.clone()
+            /*
             cache_trade.clone(),
             cache_serial.clone(),
+             */
         ));
 
         return Collector {
             thread_info: thread_info,
+            cache_manager: cache_manager  //not sure how clone will affect all this
+            /*
             cache_trade: cache_trade,
             cache_trade_prediction: cache_trade_prediction,
             cache_serial: cache_serial
+             */
         };
     }
 
@@ -89,7 +99,7 @@ impl Collector {
       }
 
     */
-
+/*
     pub async fn post_trade_prediction(
         &self,
         trade: Trade,
@@ -112,22 +122,18 @@ impl Collector {
 
         return Some(String::from("Ok"));
     }
+ */
 
-    pub async fn get_cache(&self, symbol: &str, interval: &str) -> Option<Vec<Trade>> {
+    /*
+    pub async fn get_cache(self, symbol: &str, interval: &str) -> Option<Vec<Trade>> {
         let interval_duration =
             Duration::from_secs(interval.to_string().parse::<u64>().unwrap() * 60);
-        let mut trades: Vec<Trade> = Vec::new();
-
-        for key_value_pair in self.cache_trade.iter() {
-            if key_value_pair.0.to_string().contains(&symbol)
-                && key_value_pair.1.time > (Utc::now() - interval_duration)
-            {
-                trades.push(key_value_pair.1);
-            }
-        }
-        return Some(trades);
+        let trades = self.cache_manager.get_trades(symbol.to_string(), interval.to_string());       
+        return trades;
     }
+     */
 
+    /*
      //TODO: Add interval
      pub async fn get_cached_trades_prediction(&self, symbol: &str, interval: &str) -> Option<Vec<Trade>> {
         let interval_duration =
@@ -143,7 +149,7 @@ impl Collector {
         }
         return Some(trades);
     }
-
+ */
     pub async fn close_websocket(&self) -> Option<String> {
         *self.thread_info.terminate_flag.lock().unwrap() = true;
         //*test = true;
@@ -162,9 +168,11 @@ impl Collector {
     async fn kraken_socket_loop(
         pool: PgPool,
         thread_info: ThreadInfo,
+        cache_manager: CacheManager,
+        /*
         cache_trade: Cache<String, Trade>,
         cache_serial: Cache<String, i16>
-
+        */
     ) -> Option<()> {
         let mut socket = connect("wss://ws.kraken.com").expect("Could not connect").0;
 
@@ -186,6 +194,7 @@ impl Collector {
         }
 
         let mut local_cache: Vec<Trade> = Vec::new(); // cache --> insert trades in batches
+         ;
    
         loop {
             if socket.can_read() {
@@ -203,7 +212,6 @@ impl Collector {
 
             if local_cache.len() >= 5 { //figure out what a good value here would be
                 let count = local_cache.len();
-                let mut serial = cache_serial.get("trade").unwrap();
                 for trade in local_cache.iter() {
                     //TODO create dedicated function for this and bulk insert --> less strain on the database
                     let result = sqlx::query("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
@@ -215,30 +223,15 @@ impl Collector {
                     .bind(&trade.symbol)
                     .execute(&pool).await;
 
-                    info!("Cache Insert {:?}", trade.symbol.to_owned() + &serial.to_string());
-
-                    cache_trade.insert(
-                        trade.symbol.to_owned() + &serial.to_string(),
-                        trade.to_owned(),
-                    );
-                    serial += 1;
-
                     if result.is_err() {
                         error!("Insert Failed");
                     }
+
+                    cache_manager.add_trade(trade.to_owned());
                 }
                 //data.lock().unwrap().extend(cache.clone()); // Transfer the new trades to the shared data
                 local_cache.clear();
                 info!("Inserted {:?} Trades", count);
-
-                //reset serial - this would allow a maximum of 500 data entries per minute
-                // this is by all means not a good solution!!!
-                if serial > 30000 {
-                    serial = 0;
-                }
-
-                //overwrite
-                cache_serial.insert(String::from("trade"), serial);
 
                 // terminates the thread
                 if thread_info.terminate_flag.lock().unwrap().to_owned() {

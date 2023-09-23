@@ -1,8 +1,10 @@
 use crate::model::{ohlc::Ohlc, trade::Trade};
+use crate::repository::cachemanager::CacheManager;
 use crate::repository::postgresdb::PostgresRepository;
 use crate::repository::collector::Collector;
 use crate::repository::provider::Provider;
 
+use actix_web::cookie::time::format_description::modifier::End;
 use actix_web::{web, HttpRequest};
 use actix_web::{
     error::ResponseError,
@@ -20,6 +22,7 @@ use actix_web_actors::ws;
 use derive_more::Display;
 use log::info;
 use serde::{Deserialize, Serialize};
+
 
 #[derive(Deserialize, Serialize)]
 pub struct Interval {
@@ -52,11 +55,14 @@ impl ResponseError for ApiError {
     }
 }
 
+
 #[get("/ws")]
-pub async fn websocket(req: HttpRequest, stream: web::Payload, collector: Data<Collector>) -> Result<HttpResponse, Error> {
-    ws::start(Provider::new(collector), &req, stream)
+pub async fn websocket(req: HttpRequest, stream: web::Payload, cache_manager: Data<CacheManager>) -> Result<HttpResponse, Error> {
+    ws::start(Provider::new(cache_manager), &req, stream)
 }
 
+
+/*
 #[post("/prediction")]
 pub async fn new_prediction(
     collector: Data<Collector>,
@@ -68,21 +74,33 @@ pub async fn new_prediction(
         None => Err(ApiError::BadRequest),
     }
 }
-
-
-#[get("/cached_trades/{symbol}/{interval}")]
-pub async fn get_cached_trades(
-    collector: Data<Collector>,
+ */
+#[get("/prediction/{symbol}/{interval}")]
+pub async fn get_prediction( 
+    cache_manager: Data<CacheManager>,
     symbol: Path<Symbol>,
     interval: Path<Interval>
-) -> Result<Json<Vec<Trade>>, ApiError> {
-    match collector.get_cache(&symbol.symbol, &interval.interval).await {
+) -> Result<Json<String>, ApiError> {
+    match cache_manager.get_prediction(symbol.symbol.clone(), interval.interval.clone()) {
         Some(response) => Ok(Json(response)),
         None => Err(ApiError::BadRequest),
     }
 }
 
+#[get("/cached_trades/{symbol}/{interval}")]
+pub async fn get_cached_trades( 
+    cache_manager: Data<CacheManager>,
+    symbol: Path<Symbol>,
+    interval: Path<Interval>
+) -> Result<Json<Vec<Trade>>, ApiError> {
 
+    match cache_manager.get_trades(symbol.symbol.clone(), interval.interval.clone()) {
+        Some(response) => Ok(Json(response)),
+        None => Err(ApiError::BadRequest),
+    }
+}
+
+/*
 #[get("/cached_prediction/{symbol}/{interval}")]
 pub async fn get_cached_trades_prediction(
     collector: Data<Collector>,
@@ -94,6 +112,7 @@ pub async fn get_cached_trades_prediction(
         None => Err(ApiError::BadRequest),
     }
 }
+ */
 
 
 /*
