@@ -33,18 +33,18 @@ export class AppComponent implements OnInit {
   xaxis: ApexXAxis;
   series: ApexAxisChartSeries;
 
+  latest_price: string;
+  predictions: string[];
+
   ngOnInit(){
-    this.refreshData();
- 
-    
     this.interval = setInterval(() => { 
         this.refreshData(); 
-    }, 100000);
+    }, 10000);
     
   }
 
   mapData(data: any): any {
-    const timestamp = data.time;
+    const timestamp = new Date(data.time);
     const price = parseFloat(data.price);
     return { x: timestamp, y: price };
   }
@@ -60,25 +60,48 @@ export class AppComponent implements OnInit {
         tradesData.push(this.mapData(item));
       })
 
-      console.log("here", tradesData[0]);
+      //console.log("here", tradesData);
       
-      tradesData.sort((a: any, b: any) => {
-        return new Date(a.x) > new Date(b.x);
+      tradesData = tradesData.sort((a: any, b: any) => {
+        return a.x < b.x;
       });
+
+      this.latest_price = JSON.stringify(tradesData.slice(-1));
 
       this.series = [{
         name: "XBTUSD",
         data: tradesData
       }];    
     });
+
+
+    this.dataService.getPrediction("15", "XBTUSD").subscribe((data: any) => {
+      this.predictions[0] = data;
+    });
+
+
+    this.dataService.getPrediction("30", "XBTUSD").subscribe((data: any) => {
+      this.predictions[1] = data;
+    });
+
+
+    this.dataService.getPrediction("60", "XBTUSD").subscribe((data: any) => {
+      this.predictions[2] = data;
+    });
+
   }
 
   constructor(private dataService: DataService) {
+    this.predictions = ["", "", ""];
+    this.latest_price = "";
+
     this.series = [{
       name: "XBTUSD",
       data: []
     }];    
 
+    this.refreshData();
+    
     this.chart = {
       type: "area",
       stacked: false,

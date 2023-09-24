@@ -1,6 +1,10 @@
 <!--The content below is only a placeholder and can be replaced.-->
 
 <div style="text-align:center">
+  <p>latest price: {{latest_price}}</p>
+  <p>15 min: {{predictions[0]}}</p>
+  <p>30 min: {{predictions[1]}}</p>
+  <p>60 min: {{predictions[2]}}</p>
   
   <apx-chart
   [series]="series"
@@ -13,4 +17,6 @@
   [xaxis]="xaxis"
   [autoUpdateSeries]="true"
 ></apx-chart> 
+
+
 </div>

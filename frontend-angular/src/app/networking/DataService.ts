@@ -10,11 +10,17 @@ import { Trade } from '../model/trade';
 
 @Injectable()
 export class DataService {
-    private baseUrl = "http://127.0.0.1:8080/";    
+    private baseUrl = "http://localhost:8000/";    
 
     constructor(private http: HttpClient) {}
 
     getTrades(interval: string, symbol: string) {
-        return this.http.get<Trade>(this.baseUrl + "trades/" + interval + "/" + symbol);
+        //return this.http.get<Trade>(this.baseUrl + "trades/" + interval + "/" + symbol);
+        return this.http.get<Trade>(this.baseUrl + "cached_trades/"  + symbol +"/"+ interval);
+    }
+
+    getPrediction(interval: string, symbol: string) {
+        //return this.http.get<Trade>(this.baseUrl + "trades/" + interval + "/" + symbol);
+        return this.http.get<String>(this.baseUrl + "prediction/"  + symbol +"/"+ interval);
     }
 }
