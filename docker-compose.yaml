@@ -28,46 +28,66 @@ services:
       - ./data/:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
-  pgadmin4: 
-    image: dpage/pgadmin4
-    container_name: pgadmin4
-    restart: always
-    ports:
-      - "5050:80"
-    networks:
-      network:
-        ipv4_address: 172.1.0.11
-    environment:
-      PGADMIN_DEFAULT_EMAIL: 'rileydavid@live.at'
-      PGADMIN_DEFAULT_PASSWORD: 'password'
-    volumes:
-      - ./data/pgadmin:/var/lib/pgadmin
+  #pgadmin4: 
+  #  image: dpage/pgadmin4
+  #  container_name: pgadmin4
+  #  restart: always
+  #  ports:
+  #    - "5050:80"
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.11
+  #  environment:
+  #    PGADMIN_DEFAULT_EMAIL: 'rileydavid@live.at'
+  #    PGADMIN_DEFAULT_PASSWORD: 'password'
+  #  volumes:
+  #    - ./data/pgadmin:/var/lib/pgadmin
       
-  grafana:
-    image: grafana/grafana-oss
-    container_name: grafana
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    environment:
-      GF_SECURITY_ADMIN_USER: 'admin'
-      GF_SECURITY_ADMIN_PASSWORD: 'password' #default is admin/admin 
-      GF_PATHS_CONFIG: '/etc/grafana/custom.ini'
-    networks:
-      network:
-        ipv4_address: 172.1.0.12
-    volumes: 
-      - ./data/grafana:/var/lib/grafana
-      - ./data/grafana/config/defaults.ini:/etc/grafana/custom.ini
-    user: "472"
+  #grafana:
+  #  image: grafana/grafana-oss
+  #  container_name: grafana
+  #  restart: unless-stopped
+  #  ports:
+  #    - '3000:3000'
+  #  environment:
+  #    GF_SECURITY_ADMIN_USER: 'admin'
+  #    GF_SECURITY_ADMIN_PASSWORD: 'password' #default is admin/admin 
+  #    GF_PATHS_CONFIG: '/etc/grafana/custom.ini'
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.12
+  #  volumes: 
+  #    - ./data/grafana:/var/lib/grafana
+  #    - ./data/grafana/config/defaults.ini:/etc/grafana/custom.ini
+  #  user: "472"
     
-  collector:
-    build: ./collector
-    container_name: collector
+  #collector:
+  #  build: ./collector
+  #  container_name: collector
+  #  restart: always
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.13
+
+  backend: 
+    build: ./backend
+    container_name: backend
     restart: always
+    ports:
+      - "8000:8000"
     networks:
       network:
-        ipv4_address: 172.1.0.13
+        ipv4_address: 172.1.0.14
+
+  frontend: 
+    build: ./frontend-angular
+    container_name: frontend-angular
+    restart: always
+    ports:
+      - "3000:80"
+    networks:
+      network:
+        ipv4_address: 172.1.0.15
 
   converter: 
     build: ./converter

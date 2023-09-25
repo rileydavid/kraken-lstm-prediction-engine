@@ -12,7 +12,6 @@ RUN npm install
 COPY . /app
 
 RUN npm run build
-
  
 # Stage 2
 FROM nginx:1.25.2-alpine

@@ -5,16 +5,25 @@ CREATE TABLE IF NOT EXISTS kraken_trade (
     volume NUMERIC NOT NULL, 
     side TEXT,
     order_type TEXT,
-    symbol TEXT NOT NULL -- One more just in case
+    symbol TEXT NOT NULL 
 );
 
-ALTER TABLE kraken_trade  SET UNLOGGED;
+CREATE TABLE IF NOT EXISTS kraken_trade_prediction (
+    time TIMESTAMPTZ NOT NULL,
+    price NUMERIC NOT NULL,  
+    volume NUMERIC NOT NULL, 
+    side TEXT,
+    order_type TEXT,
+    symbol TEXT NOT NULL 
+);
+
+-- ALTER TABLE kraken_trade  SET UNLOGGED;
 
 
  -- CREATE INDEX idx_kraken_symbol_time ON kraken_trade (symbol, time DESC);
 
  -- SELECT create_hypertable('kraken_trade', 'time', migrate_data => true);
-
+-- SELECT create_hypertable('kraken_trade_prediction', 'time', migrate_data => true);
 -- one minute candles 
 
 

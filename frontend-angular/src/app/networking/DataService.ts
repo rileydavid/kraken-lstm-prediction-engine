@@ -10,7 +10,7 @@ import { Trade } from '../model/trade';
 
 @Injectable()
 export class DataService {
-    private baseUrl = "http://localhost:8000/";    
+    private baseUrl = "http://172.1.0.14:8000/";    
 
     constructor(private http: HttpClient) {}
 
