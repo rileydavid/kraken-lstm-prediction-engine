@@ -27,18 +27,14 @@ class WebSocketClient:
                     response = await websocket.recv()
                     if "order_type" in response:
                         print(f'Received Message: {response}')
-                        trade = json.loads(response); 
-                        self.x.append([parser.isoparse(trade["time"]).timestamp() * 1_000])
-
-                        self.y.append(trade["price"])
-
-                        print(self.x)
-
-                        model = LinearRegression()
-                        model.fit(self.x, self.y)
-
-                        print(self.x[0][0])
-                        print("pred ", model.predict([[self.x[0][0] + 900000]]))
+                        #trade = json.loads(response); 
+                        #self.x.append([parser.isoparse(trade["time"]).timestamp() * 1_000])
+                        #self.y.append(trade["price"])
+                        #print(self.x)
+                        #model = LinearRegression()
+                        #model.fit(self.x, self.y)
+                        #print(self.x[0][0])
+                        #print("pred ", model.predict([[self.x[0][0] + 900000]]))
 
 
 
@@ -49,7 +45,3 @@ class WebSocketClient:
 if __name__ == "__main__":
     client = WebSocketClient("127.0.0.1", 8000, "secret")
     client.start()
-    print("returns? ")
-    while True:
-        time.sleep(5)
-        print("data ", client._data)
