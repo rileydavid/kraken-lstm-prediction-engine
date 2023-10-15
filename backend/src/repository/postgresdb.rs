@@ -4,25 +4,28 @@ use crate::model::trade::Trade;
 use chrono::{DateTime, Utc};
 use log::error;
 use log::info;
+use sqlx::Error;
 use sqlx::types::BigDecimal;
 use sqlx::PgPool;
 use sqlx::Row;
 use std::ops::Add;
 use std::str::FromStr;
+use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct PostgresRepository {
-    pool: PgPool,
+    pool: Arc<PgPool>,
 }
 
 impl PostgresRepository {
-    pub fn init(pool: PgPool) -> PostgresRepository {
+    pub fn init(pool: Arc<PgPool>) -> PostgresRepository {
         PostgresRepository { pool }
     }
 
     pub async fn get_symbols(&self) -> Option<Vec<String>> {
         // improve this query --> currently takes quite some time to execute
         let rows = sqlx::query("SELECT DISTINCT symbol FROM kraken_trade")
-            .fetch_all(&self.pool)
+            .fetch_all(&*self.pool)
             .await;
 
         info!("here");
@@ -40,6 +43,7 @@ impl PostgresRepository {
     }
 
     // Todo: handle errors better here 
+    /*
     pub async fn insert_trade_prediction(&self, trade: Trade) {
         let result = sqlx::query("insert into kraken_trade_prediction (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
         .bind(&trade.time)
@@ -48,15 +52,34 @@ impl PostgresRepository {
         .bind(&trade.side)
         .bind(&trade.order_type)
         .bind(&trade.symbol)
-        .execute(&self.pool)
+        .execute(&*self.pool)
         .await;
 
         if result.is_err() {
             error!("Error whilst inserting Trade");
         }
     }
+     */
+
+    pub async fn insert_trades(&self, trades: Vec<Trade>) -> Result<(), Error> {
+        let mut transaction = self.pool.begin().await?;
+          
+        for trade in trades {
+            let _ = sqlx::query!("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)", 
+            &trade.time,
+            sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap(),
+            sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap(),
+            &trade.side,
+            &trade.order_type,
+            &trade.symbol).execute(transaction.as_mut()).await?;
+        }
+
+        transaction.commit().await?;
+        Ok(())
+    }
 
     // Todo: handle errors better here 
+    /*
     pub async fn insert_trade(&self, trade: &Trade) {
         // maybe there is a better way to convert the bigdecimal
         let result = sqlx::query("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
@@ -66,13 +89,14 @@ impl PostgresRepository {
         .bind(&trade.side)
         .bind(&trade.order_type)
         .bind(&trade.symbol)
-        .execute(&self.pool)
+        .execute(&*self.pool)
         .await;
 
         if result.is_err() {
             error!("Error whilst inserting Trade");
         }
     }
+     */
 
     // interval in minutes
     pub async fn get_trades(&self, interval: &str, symbol: &str) -> Option<Vec<Trade>> {
@@ -96,7 +120,7 @@ impl PostgresRepository {
         }
 
         //originally used bind but that did not work
-        let rows = sqlx::query(&query).fetch_all(&self.pool).await;
+        let rows = sqlx::query(&query).fetch_all(&*self.pool).await;
 
         if rows.is_ok() {
             let mut trades: Vec<Trade> = Vec::new();
@@ -145,7 +169,7 @@ impl PostgresRepository {
         }
 
         //originally used bind but that did not work
-        let rows = sqlx::query(&query).fetch_all(&self.pool).await;
+        let rows = sqlx::query(&query).fetch_all(&*self.pool).await;
 
         if rows.is_ok() {
             let mut ohlc_candles: Vec<Ohlc> = Vec::new();

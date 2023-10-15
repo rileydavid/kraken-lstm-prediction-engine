@@ -1,26 +1,20 @@
 use std::{
     collections::HashSet,
-    ops::Add,
-    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
 use actix::prelude::*;
-use actix_web::web::{Bytes, Data};
+use actix_web::web::Data;
 use actix_web_actors::ws;
 
-use actix_web::{web, Error, HttpRequest, HttpResponse};
 use log::info;
-use moka::sync::Cache;
 use uuid::Uuid;
 
-use crate::model::trade::Trade;
-
-use super::{cachemanager::CacheManager, collector::Collector};
+use super::cachemanager::CacheManager;
 
 const UPDATE_INTERVAL: Duration = Duration::from_secs(2);
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+//const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+//const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct Provider {
     hb: Instant,

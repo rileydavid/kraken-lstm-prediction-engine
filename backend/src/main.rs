@@ -2,10 +2,15 @@ mod api;
 mod model;
 mod repository;
 
+use std::sync::Arc;
+
+use dotenv::dotenv;
+
 use actix_cors::Cors;
 
 use api::endpoints::{get_trades, get_ohlc, get_symbols, close_websocket, get_cached_trades, websocket, get_prediction /* get_cached_trades_prediction ,new_prediction */};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
+use log::info;
 use repository::postgresdb::PostgresRepository;
 use repository::collector::Collector;
 use repository::cachemanager::CacheManager;
@@ -13,43 +18,39 @@ use repository::cachemanager::CacheManager;
 use sqlx::postgres::PgPoolOptions;
 
 
+/*
+ TODO: 
+ * Struct for communication between all parts 
+ *  
+ * 
+*/
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Starting Backend");
+    
+    // load env configuration --> DB URL, etc
+    dotenv().ok();
 
-    std::env::set_var("RUST_LOG", "debug");
-    std::env::set_var("RUST_BACKTRACE", "1");
-    std::env::set_var(
-        "DATABASE_URL",
-        "postgres://admin:password@172.1.0.10:5432/db",
-    );
-
-    std::env::set_var(
-        "WEBSERVER_IP",
-        "172.1.0.14",
-    );
-
+    // init logging
     env_logger::init();
-
-    let pool_backend = PgPoolOptions::new()
-        .max_connections(2)
-        .connect(&std::env::var("DATABASE_URL").unwrap())
-        .await
-        .unwrap();
-
-    let pool_websocket = PgPoolOptions::new()
+    info!("Starting Backend");
+    
+    // init postgres pool 
+    let pgpool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&std::env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
 
-        
+    let pool = Arc::new(pgpool);
 
     let cache_repository = CacheManager::new();
 
+    let postgres_repository = PostgresRepository::init(pool.clone());
+
     // this seems to work
-    let collector_repository = Collector::init(pool_websocket.clone(), cache_repository.clone());
+    let collector_repository = Collector::init(pool.clone(), cache_repository.clone(), postgres_repository.clone());
 
     let handle_collector = collector_repository.clone();
     
@@ -58,12 +59,13 @@ async fn main() -> std::io::Result<()> {
         let cors = Cors::permissive(); // should not be used in production code 
 
         // for postgres 
-        let postgres_repository = PostgresRepository::init(pool_backend.clone());
-        let postgres_data = Data::new(postgres_repository);
+        
+        let postgres_data = Data::new(postgres_repository.clone());
 
         // Currently not working because the webserver instantiates this 4 times 
         let collector_data = Data::new(collector_repository.clone());
         let cache_manager_data = Data::new(cache_repository.clone());
+
 
         App::new()
             .wrap(cors)
@@ -85,9 +87,9 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await;
 
+    info!("here?");
     // shutdown websocket thread not working 
     let _ = handle_collector.close_websocket();
 
     return Ok(());
-
 }

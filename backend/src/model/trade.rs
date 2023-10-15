@@ -4,7 +4,6 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, TimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use strum_macros::ToString;
 
 #[derive(Serialize, sqlx::FromRow, Deserialize, Debug, Clone)]
 pub struct Trade {

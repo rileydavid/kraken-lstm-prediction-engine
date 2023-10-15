@@ -4,12 +4,10 @@ use crate::repository::postgresdb::PostgresRepository;
 use crate::repository::collector::Collector;
 use crate::repository::provider::Provider;
 
-use actix_web::cookie::time::format_description::modifier::End;
 use actix_web::{web, HttpRequest};
 use actix_web::{
     error::ResponseError,
     get,
-    post,
     http::{header::ContentType, StatusCode},
     web::Data,
     web::Json,
@@ -20,7 +18,6 @@ use actix_web::{
 
 use actix_web_actors::ws;
 use derive_more::Display;
-use log::info;
 use serde::{Deserialize, Serialize};
 
 

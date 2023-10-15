@@ -1,9 +1,7 @@
-use std::collections::HashMap;
+
 use std::collections::HashSet;
 use std::time::Duration;
-
 use bigdecimal::ToPrimitive;
-use chrono::NaiveDateTime;
 use chrono::Utc;
 use linfa::prelude::*;
 use linfa_linear::LinearRegression;
@@ -18,6 +16,7 @@ use crate::model::trade::Trade;
 //TODO: Sadly the websocket does not get the correct updates figure out how this could be resolved --> maybe because
 // it is using the data<CacheManager>
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct CacheManager {
     trade: Cache<String, Trade>, // live trading data cache, using a serial number which counts up
@@ -94,7 +93,7 @@ impl CacheManager {
         let shape = (xs.len(), 1);
         let array2 = Array2::from_shape_vec(shape, xs).unwrap();
 
-        let shape = (1, ys.len());
+        //let shape = (1, ys.len());
         let array1 = Array1::from(ys);
 
         //info!("Array2 {:?}", array2);
@@ -103,10 +102,10 @@ impl CacheManager {
         let dataset = Dataset::new(array2, array1);
         let model = LinearRegression::default().fit(&dataset).unwrap();
 
-        let mut y_values: Array1<f64> = array![price];
+        let y_values: Array1<f64> = array![price];
         let dataset = Dataset::new(arr2(&[[latest + interval_duration]]), y_values);
 
-        let temp: i64 = (latest + 900000.0) as i64;
+        //let temp: i64 = (latest + 900000.0) as i64;
         //info!("time {:?}", NaiveDateTime::from_timestamp_millis((latest+interval_duration) as i64));
 
         let prediction = model.predict(&dataset);
@@ -158,6 +157,8 @@ impl CacheManager {
         );
     }
 
+
+    /*
     pub fn add_prediction(self, trade: Trade) {
         //TODO missing logic for prediction cache
         self.prediction.insert(
@@ -188,24 +189,25 @@ impl CacheManager {
 
         return self;
 
-        /*
-        match self.client_subscriptions.get(&uuid) {
-            Some(hashset) => {
-                let mut temp = HashSet::new();
-                for element in hashset.iter(){
-                    temp.insert(element.to_owned());
-                }
-                temp.insert(symbol);
-                self.client_subscriptions.insert(uuid, hashset.to_owned());
-            },
-            None => {
-                let mut hashset = HashSet::new();
-                hashset.insert(symbol);
-                self.client_subscriptions.insert(uuid, hashset);
-            },
-        }
-         */
+        //match self.client_subscriptions.get(&uuid) {
+        //    Some(hashset) => {
+        //        let mut temp = HashSet::new();
+        //        for element in hashset.iter(){
+        //            temp.insert(element.to_owned());
+        //        }
+        //        temp.insert(symbol);
+        //        self.client_subscriptions.insert(uuid, hashset.to_owned());
+        //    },
+        //    None => {
+        //        let mut hashset = HashSet::new();
+        //        hashset.insert(symbol);
+        //        self.client_subscriptions.insert(uuid, hashset);
+        //    },
+        //}
+        
     }
+
+     */
 
     pub fn get_trades_subscription(&self, uuid: Uuid) -> Vec<Trade> {
         //nothing in there
