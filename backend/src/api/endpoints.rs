@@ -75,6 +75,7 @@ pub async fn new_prediction(
     }
 }
  */
+
 #[get("/prediction/{symbol}/{interval}")]
 pub async fn get_prediction( 
     cache_manager: Data<CacheManager>,

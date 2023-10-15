@@ -18,8 +18,6 @@ use std::time::Duration;
 
 use super::{postgresdb::PostgresRepository, cachemanager::CacheManager};
 
-// maybe think about combining Collector with postgres
-
 #[derive(Clone)]
 pub struct Collector {
     thread_info: ThreadInfo,
