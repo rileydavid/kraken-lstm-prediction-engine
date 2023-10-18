@@ -146,7 +146,7 @@ pub async fn get_symbols(
     }
 }
 
-#[get("/trades/{interval}/{symbol}")]
+#[get("/trades/{symbol}/{interval}")]
 pub async fn get_trades(
     interval: Path<Interval>,
     symbol: Path<Symbol>,
@@ -159,6 +159,7 @@ pub async fn get_trades(
     }
 }
 
+/*
 #[get("/ohlc/{interval}/{symbol}")]
 pub async fn get_ohlc(
     interval: Path<Interval>,
@@ -170,3 +171,4 @@ pub async fn get_ohlc(
         None => Err(ApiError::BadRequest),
     }
 }
+ */

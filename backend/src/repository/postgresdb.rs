@@ -3,9 +3,9 @@ use crate::model::trade::Trade;
 
 use chrono::{DateTime, Utc};
 use log::error;
-use log::info;
-use sqlx::Error;
+use log::{info, warn};
 use sqlx::types::BigDecimal;
+use sqlx::Error;
 use sqlx::PgPool;
 use sqlx::Row;
 use std::ops::Add;
@@ -23,26 +23,17 @@ impl PostgresRepository {
     }
 
     pub async fn get_symbols(&self) -> Option<Vec<String>> {
-        // improve this query --> currently takes quite some time to execute
-        let rows = sqlx::query("SELECT DISTINCT symbol FROM kraken_trade")
+        let rows = sqlx::query("SELECT DISTINCT symbol FROM symbols")
             .fetch_all(&*self.pool)
             .await;
 
-        info!("here");
-
-        if rows.is_ok() {
-            let mut symbols: Vec<String> = Vec::new();
-            for row in rows.unwrap() {
-                let symbol: String = row.get(0);
-                symbols.push(symbol);
-            }
-            info!("{:?}", symbols.len());
-            return Some(symbols);
+        match rows.is_ok() {
+            true => Some(rows.unwrap().iter().map(|row| row.get(0)).collect()),
+            false => None,
         }
-        return None;
     }
 
-    // Todo: handle errors better here 
+    // Todo: handle errors better here
     /*
     pub async fn insert_trade_prediction(&self, trade: Trade) {
         let result = sqlx::query("insert into kraken_trade_prediction (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
@@ -62,23 +53,30 @@ impl PostgresRepository {
      */
 
     pub async fn insert_trades(&self, trades: Vec<Trade>) -> Result<(), Error> {
-        let mut transaction = self.pool.begin().await?;
-          
+        //let mut transaction = self.pool.begin().await?;
+        // creating a transaction does not seem to work with the procedure call
+        //TODO: if this is inserting and get_symbols is called it can take up to 16 secs
+        // improvement needed
         for trade in trades {
-            let _ = sqlx::query!("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)", 
-            &trade.time,
-            sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap(),
-            sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap(),
-            &trade.side,
-            &trade.order_type,
-            &trade.symbol).execute(transaction.as_mut()).await?;
+            let _ = sqlx::query!(
+                "CALL insert_trade ($1, $2, $3, $4, $5, $6)",
+                &trade.time,
+                sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap(),
+                sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap(),
+                &trade.side,
+                &trade.order_type,
+                &trade.symbol
+            )
+            .execute(&*self.pool)
+            .await;
+            //transaction.as_mut()).await?;
         }
 
-        transaction.commit().await?;
+        //transaction.commit().await?;
         Ok(())
     }
 
-    // Todo: handle errors better here 
+    // Todo: handle errors better here
     /*
     pub async fn insert_trade(&self, trade: &Trade) {
         // maybe there is a better way to convert the bigdecimal
@@ -98,55 +96,39 @@ impl PostgresRepository {
     }
      */
 
-    // interval in minutes
-    pub async fn get_trades(&self, interval: &str, symbol: &str) -> Option<Vec<Trade>> {
-        //self.pool
-        let query;
-
-        match interval {
-            "15" => {
-                query = "SELECT * FROM kraken_trade WHERE time >= NOW() - INTERVAL '15 minutes' AND symbol = '".to_owned().add(symbol).add("'");
-            }
-            "30" => {
-                query = "SELECT * FROM kraken_trade WHERE time >= NOW() - INTERVAL '30 minutes' AND symbol = '".to_owned().add(symbol).add("'");
-            }
-            "60" => {
-                query = "SELECT * FROM kraken_trade WHERE time >= NOW() - INTERVAL '60 minutes' AND symbol = '".to_owned().add(symbol).add("'");
-            }
-            _ => {
-                error!("Unknown interval {:?}", interval);
-                return None;
+    fn validate_numeric(input: &str) -> String {
+        info!("{:?}", input);
+        match input.trim().parse::<i64>() {
+            Ok(_) => input.to_owned(),
+            Err(_) => {
+                warn!("Invalid Timeframe provided using default value");
+                "15".to_owned()
             }
         }
-
-        //originally used bind but that did not work
-        let rows = sqlx::query(&query).fetch_all(&*self.pool).await;
-
-        if rows.is_ok() {
-            let mut trades: Vec<Trade> = Vec::new();
-            for row in rows.unwrap() {
-                let time: DateTime<Utc> = row.get(0);
-                let price: BigDecimal = row.get(1);
-                let volume: BigDecimal = row.get(2);
-                let side: String = row.get(3);
-                let order_type = row.get(4);
-                let symbol: String = row.get(5);
-
-                trades.push(Trade::new(
-                    time,
-                    bigdecimal::BigDecimal::from_str(&price.to_string()).unwrap(),
-                    bigdecimal::BigDecimal::from_str(&volume.to_string()).unwrap(),
-                    side,
-                    order_type,
-                    symbol,
-                ));
-            }
-            info!("{:?}", trades.len());
-            return Some(trades);
-        }
-        return None;
     }
 
+    // interval in minutes
+    pub async fn get_trades(&self, interval: &str, symbol: &str) -> Option<Vec<Trade>> {
+        let timeframe = Self::validate_numeric(interval);
+        //TODO: add verification of symbol
+        let query = format!("SELECT * FROM kraken_trade WHERE time >= NOW() - INTERVAL '{} minutes' AND symbol = '{}'", timeframe, symbol);
+        let rows = sqlx::query(&query).fetch_all(&*self.pool).await;
+
+        match rows.is_ok() {
+            true => Some(
+                rows.unwrap()
+                    .iter()
+                    .map(|row| Trade::parse_from_pgrow(row))
+                    .collect::<Vec<Trade>>(),
+            ),
+            false => {
+                error!("Error occured whilst fetching rows");
+                None
+            }
+        }
+    }
+
+    /*
     // interval in minutes
     pub async fn get_ohlc(&self, interval: &str, symbol: &str) -> Option<Vec<Ohlc>> {
         //self.pool
@@ -195,4 +177,5 @@ impl PostgresRepository {
         }
         return None;
     }
+     */
 }

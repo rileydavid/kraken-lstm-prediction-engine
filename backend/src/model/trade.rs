@@ -4,6 +4,7 @@ use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, TimeZone};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sqlx::{postgres::PgRow, Row};
 
 #[derive(Serialize, sqlx::FromRow, Deserialize, Debug, Clone)]
 pub struct Trade {
@@ -75,6 +76,24 @@ impl Trade {
             "order_type": &self.order_type,
             "symbol": &self.symbol,
         })
+    }
+
+    pub fn parse_from_pgrow(row: &PgRow) -> Trade {
+        let time = row.get(0);
+        let price: sqlx::types::BigDecimal = row.get(1);
+        let volume: sqlx::types::BigDecimal = row.get(2);
+        let side = row.get(3);
+        let order_type = row.get(4);
+        let symbol = row.get(5);
+
+        Trade::new(
+            time,
+            bigdecimal::BigDecimal::from_str(&price.to_string()).unwrap(),
+            bigdecimal::BigDecimal::from_str(&volume.to_string()).unwrap(),
+            side,
+            order_type,
+            symbol,
+        )
     }
 
     fn parse_timestamp(timestamp: &str) -> DateTime<Utc> {
