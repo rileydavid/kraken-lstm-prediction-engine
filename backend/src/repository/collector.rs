@@ -85,9 +85,22 @@ impl Collector {
                 {
                     let json: Value = serde_json::from_str(&msg).unwrap();
                     collected_trades.extend(Trade::parse(json).unwrap());
+
+                    for trade in collected_trades.iter(){
+                        match db.insert_trade(trade.to_owned()).await {
+                            Ok(_) => {
+                                info!("Inserted Trade");
+                            },
+                            Err(err) => {
+                                error!("Error Occured during Insert {:?}",  err);
+                            }
+                        }
+                    }
+
+                    collected_trades.clear();
                 }
             }
-
+/*
             if collected_trades.len() >= 5 { //figure out what a good value here would be
                 let count = collected_trades.len();
                 
@@ -109,10 +122,12 @@ impl Collector {
                 collected_trades.clear();
 
                 // check if the thread should be terminated
-                if thread_info.terminate_flag.lock().unwrap().to_owned() {
-                    info!("Returning from thread");
-                    return None;
-                }
+               
+            } 
+   */          
+            if thread_info.terminate_flag.lock().unwrap().to_owned() {
+                info!("Returning from thread");
+                return None;
             }
         }
     }

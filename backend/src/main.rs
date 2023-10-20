@@ -78,6 +78,7 @@ async fn main() -> std::io::Result<()> {
             .service(websocket)
             //.service(web::resource("/ws").route(web::get().to(websocket)))
     })
+    .workers(4)
     .bind((std::env::var("WEBSERVER_IP").unwrap(), 8000))?
     .run()
     .await;

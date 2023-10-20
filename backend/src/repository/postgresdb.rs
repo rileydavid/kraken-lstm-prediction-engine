@@ -23,7 +23,7 @@ impl PostgresRepository {
     }
 
     pub async fn get_symbols(&self) -> Option<Vec<String>> {
-        let rows = sqlx::query("SELECT DISTINCT symbol FROM symbols")
+        let rows = sqlx::query("SELECT symbol FROM symbols")
             .fetch_all(&*self.pool)
             .await;
 
@@ -33,30 +33,25 @@ impl PostgresRepository {
         }
     }
 
-    // Todo: handle errors better here
-    /*
-    pub async fn insert_trade_prediction(&self, trade: Trade) {
-        let result = sqlx::query("insert into kraken_trade_prediction (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
-        .bind(&trade.time)
-        .bind(sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap())
-        .bind(sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap())
-        .bind(&trade.side)
-        .bind(&trade.order_type)
-        .bind(&trade.symbol)
+    pub async fn insert_trade(&self, trade: Trade) -> Result<(), Error> {
+        let _ = sqlx::query!(
+            "CALL insert_trade ($1, $2, $3, $4, $5, $6)",
+            &trade.time,
+            sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap(),
+            sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap(),
+            &trade.side,
+            &trade.order_type,
+            &trade.symbol
+        )
         .execute(&*self.pool)
         .await;
 
-        if result.is_err() {
-            error!("Error whilst inserting Trade");
-        }
+        Ok(())
     }
-     */
 
     pub async fn insert_trades(&self, trades: Vec<Trade>) -> Result<(), Error> {
-        //let mut transaction = self.pool.begin().await?;
-        // creating a transaction does not seem to work with the procedure call
-        //TODO: if this is inserting and get_symbols is called it can take up to 16 secs
-        // improvement needed
+        let mut transaction = self.pool.begin().await?;
+
         for trade in trades {
             let _ = sqlx::query!(
                 "CALL insert_trade ($1, $2, $3, $4, $5, $6)",
@@ -67,34 +62,13 @@ impl PostgresRepository {
                 &trade.order_type,
                 &trade.symbol
             )
-            .execute(&*self.pool)
+            .execute(transaction.as_mut())
             .await;
-            //transaction.as_mut()).await?;
         }
 
-        //transaction.commit().await?;
+        transaction.commit().await?;
         Ok(())
     }
-
-    // Todo: handle errors better here
-    /*
-    pub async fn insert_trade(&self, trade: &Trade) {
-        // maybe there is a better way to convert the bigdecimal
-        let result = sqlx::query("insert into kraken_trade (time, price, volume, side, order_type, symbol) values ($1, $2, $3, $4, $5, $6)")
-        .bind(&trade.time)
-        .bind(sqlx::types::BigDecimal::from_str(&trade.price.to_string()).unwrap())
-        .bind(sqlx::types::BigDecimal::from_str(&trade.volume.to_string()).unwrap())
-        .bind(&trade.side)
-        .bind(&trade.order_type)
-        .bind(&trade.symbol)
-        .execute(&*self.pool)
-        .await;
-
-        if result.is_err() {
-            error!("Error whilst inserting Trade");
-        }
-    }
-     */
 
     fn validate_numeric(input: &str) -> String {
         info!("{:?}", input);
