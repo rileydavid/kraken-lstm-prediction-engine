@@ -78,13 +78,32 @@ impl Trade {
         })
     }
 
-    pub fn parse_from_pgrow(row: &PgRow) -> Trade {
+    pub fn new_from_sqlx_bigdecimal(
+        time: &DateTime<Utc>,
+        price: &sqlx::types::BigDecimal,
+        volume: &sqlx::types::BigDecimal,
+        side: &String,
+        order_type: &String,
+        symbol: &String,
+    ) -> Trade {
+        Trade {
+            time: time.to_owned(),
+            price: bigdecimal::BigDecimal::from_str(&price.to_string()).unwrap(),
+            volume: bigdecimal::BigDecimal::from_str(&volume.to_string()).unwrap(),
+            side: side.to_owned(),
+            order_type: order_type.to_owned(),
+            symbol: symbol.to_owned(),
+        }
+    }
+
+
+    pub fn parse_from_pgrow(row: &PgRow, symbol: &str) -> Trade {
         let time = row.get(0);
         let price: sqlx::types::BigDecimal = row.get(1);
         let volume: sqlx::types::BigDecimal = row.get(2);
         let side = row.get(3);
         let order_type = row.get(4);
-        let symbol = row.get(5);
+        //let symbol = row.get(5);
 
         Trade::new(
             time,
@@ -92,7 +111,7 @@ impl Trade {
             bigdecimal::BigDecimal::from_str(&volume.to_string()).unwrap(),
             side,
             order_type,
-            symbol,
+            symbol.to_owned(),
         )
     }
 

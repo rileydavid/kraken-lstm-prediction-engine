@@ -28,20 +28,20 @@ services:
       - ./data/:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
-  #pgadmin4: 
-  #  image: dpage/pgadmin4
-  #  container_name: pgadmin4
-  #  restart: always
-  #  ports:
-  #    - "5050:80"
-  #  networks:
-  #    network:
-  #      ipv4_address: 172.1.0.11
-  #  environment:
-  #    PGADMIN_DEFAULT_EMAIL: 'rileydavid@live.at'
-  #    PGADMIN_DEFAULT_PASSWORD: 'password'
-  #  volumes:
-  #    - ./data/pgadmin:/var/lib/pgadmin
+  pgadmin4: 
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    restart: always
+    ports:
+      - "5050:80"
+    networks:
+      network:
+        ipv4_address: 172.1.0.11
+    environment:
+      PGADMIN_DEFAULT_EMAIL: 'rileydavid@live.at'
+      PGADMIN_DEFAULT_PASSWORD: 'password'
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
       
   #grafana:
   #  image: grafana/grafana-oss
@@ -69,33 +69,33 @@ services:
   #    network:
   #      ipv4_address: 172.1.0.13
 
-  backend: 
-    build: ./backend
-    container_name: backend
-    restart: always
-    ports:
-      - "8000:8000"
-    networks:
-      network:
-        ipv4_address: 172.1.0.14
+  #backend: 
+  #  build: ./backend
+  #  container_name: backend
+  #  restart: always
+  #  ports:
+  #    - "8000:8000"
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.14
 
-  frontend: 
-    build: ./frontend-angular
-    container_name: frontend-angular
-    restart: always
-    ports:
-      - "3000:80"
-    networks:
-      network:
-        ipv4_address: 172.1.0.15
+  #frontend: 
+  #  build: ./frontend-angular
+  #  container_name: frontend-angular
+  #  restart: always
+  #  ports:
+  #    - "3000:80"
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.15
 
-  converter: 
-    build: ./converter
-    container_name: converter
-    restart: no
-    volumes:
-      - ./data/:/data
-    networks:
-      network:
-        ipv4_address: 172.1.0.99
+  #converter: 
+  #  build: ./converter
+  #  container_name: converter
+  #  restart: no
+  #  volumes:
+  #    - ./data/:/data
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.99
 

@@ -36,6 +36,7 @@ linfa-linear = "0.6.1"
 linfa = "0.6.1"
 ndarray = "0.15"
 dotenv = "0.15.0"
+rayon = "1.8.0"
 
 # only for docker image
 #openssl = { version = "0.10", features = ["vendored"] }

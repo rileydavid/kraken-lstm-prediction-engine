@@ -48,9 +48,6 @@ SELECT * FROM one_min_candle WHERE symbol = 'XRPUSD' ORDER BY bucket LIMIT 1000;
 SELECT * FROM kraken_trade ORDER BY time DESC LIMIT 1000;
 
 
-
-
-
 CREATE MATERIALIZED VIEW ten_min_average_price
 WITH (timescaledb.continuous) AS
 SELECT time_bucket('10 minutes', time) AS ten_min, avg(price)
@@ -63,9 +60,6 @@ SELECT add_continuous_aggregate_policy('ten_min_average_price',
     start_offset => INTERVAL '20 min',
     end_offset => INTERVAL '10 min',
     schedule_interval => INTERVAL '10 min');
-
-
-
 
 
 SELECT
