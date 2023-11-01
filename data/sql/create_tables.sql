@@ -1,3 +1,8 @@
+
+-- import historical data missing here
+
+-- not sure if it is a good idea to use NUMERIC instead of double precision 
+-- https://stackoverflow.com/questions/20884405/is-there-a-performance-hit-using-decimal-data-types-mysql-postgres
 CREATE TABLE IF NOT EXISTS kraken_trade (
     time TIMESTAMPTZ NOT NULL,
     price NUMERIC NOT NULL,  
@@ -6,6 +11,9 @@ CREATE TABLE IF NOT EXISTS kraken_trade (
     order_type TEXT,
     symbol_id SERIAL NOT NULL
 );
+
+-- hyper table
+SELECT create_hypertable('kraken_trade', 'time', migrate_data => true);
 
 CREATE TABLE IF NOT EXISTS symbols (
     id SERIAL PRIMARY KEY,
@@ -17,14 +25,15 @@ CREATE INDEX idx_symbols_symbol ON symbols (symbol);
 
 CREATE OR REPLACE FUNCTION get_trades (
     input_interval INTEGER, -- in minutes
-    input_symbol TEXT 
+    input_symbol TEXT -- all returns all symbols
 )
 RETURNS TABLE (
     time_ TIMESTAMPTZ,
     price NUMERIC,
     volume NUMERIC, 
     side TEXT,
-    order_type TEXT
+    order_type TEXT, 
+    symbol TEXT
 )
 LANGUAGE plpgsql    
 AS $$
@@ -32,24 +41,69 @@ DECLARE
 symbol_id_result INTEGER;
 interval_duration INTERVAL; 
 BEGIN
-   -- fill in here
-    SELECT id INTO symbol_id_result FROM symbols WHERE symbol = input_symbol;
-	
-	interval_duration := input_interval * INTERVAL '1 minute';
-	
-    RETURN QUERY SELECT 
-		kraken_trade.time,
-		kraken_trade.price,
-		kraken_trade.volume,
-		kraken_trade.side,
-		kraken_trade.order_type
-	FROM kraken_trade WHERE kraken_trade.symbol_id = symbol_id_result 
-	AND kraken_trade.time >= NOW() - interval_duration
-	ORDER BY kraken_trade.time; 
-END;$$
+    interval_duration := input_interval * INTERVAL '1 minute';
 
--- Example
--- SELECT * FROM get_trades (15, 'ETHUSD');
+    IF input_symbol = 'all' THEN
+        RETURN QUERY SELECT 
+            kraken_trade.time,
+            kraken_trade.price,
+            kraken_trade.volume,
+            kraken_trade.side,
+            kraken_trade.order_type, 
+            _symbol.symbol AS symbol
+        FROM kraken_trade 
+        JOIN symbols AS _symbol ON kraken_trade.symbol_id = _symbol.id 
+        AND kraken_trade.time >= NOW() - interval_duration
+        ORDER BY kraken_trade.time; 
+    ELSE 
+        SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
+        
+        RETURN QUERY SELECT 
+            kraken_trade.time,
+            kraken_trade.price,
+            kraken_trade.volume,
+            kraken_trade.side,
+            kraken_trade.order_type, 
+            _symbol.symbol AS symbol
+        FROM kraken_trade 
+        JOIN symbols AS _symbol ON kraken_trade.symbol_id = _symbol.id 
+        WHERE kraken_trade.symbol_id = symbol_id_result 
+        AND kraken_trade.time >= NOW() - interval_duration
+        ORDER BY kraken_trade.time; 
+    END IF;
+END;$$
+-- Example: SELECT * FROM get_trades (15, 'ETHUSD');
+
+CREATE OR REPLACE FUNCTION get_all_trades (
+    input_interval INTEGER -- in minutes
+)
+RETURNS TABLE (
+    time_ TIMESTAMPTZ,
+    price NUMERIC,
+    volume NUMERIC, 
+    side TEXT,
+    order_type TEXT,
+    symbol TEXT
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE 
+interval_duration INTERVAL; 
+BEGIN
+	interval_duration := input_interval * INTERVAL '1 minute';
+    -- get all (all symbols) trades from a give interval 
+    RETURN QUERY SELECT kraken_trade.time,
+        kraken_trade.price,
+        kraken_trade.volume,
+        kraken_trade.side,
+        kraken_trade.order_type,
+        _symbol.symbol
+    FROM kraken_trade
+    JOIN symbols AS _symbol ON kraken_trade.symbol_id = _symbol.id 
+    WHERE kraken_trade.time >= NOW() - interval_duration
+    ORDER BY kraken_trade.time;
+END;$$
+-- Example: SELECT * FROM get_all_trades (15);
 
 CREATE OR REPLACE PROCEDURE insert_trade (
     _time TIMESTAMPTZ,
@@ -75,8 +129,226 @@ BEGIN
     COMMIT;
 END;$$
 
+-- create ohlc (open, high, low, close) table for hour
+CREATE MATERIALIZED VIEW kraken_ohlc_hour
+WITH (timescaledb.continuous) AS
+    SELECT
+        time_bucket('1 hour', time) AS bucket,
+        symbol_id,
+        FIRST(price, time) AS open_price,
+        MAX(price) AS high, 
+        MIN(price) AS low,
+        LAST(price, time) AS close_price,
+        SUM(volume) AS volume
+    FROM kraken_trade
+GROUP BY bucket, symbol_id;
+
+SELECT add_continuous_aggregate_policy('kraken_ohlc_hour',
+    start_offset => INTERVAL '3 hour',
+    end_offset => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '1 hour');
 
 
+CREATE OR REPLACE FUNCTION get_ohlc_hour (
+    input_interval INTEGER, -- in days / all for all symbols
+    input_symbol TEXT 
+)
+RETURNS TABLE (
+    bucket TIMESTAMPTZ,
+    open_price NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close_price NUMERIC,
+    volume NUMERIC,
+    symbol TEXT
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE 
+symbol_id_result INTEGER;
+interval_duration INTERVAL; 
+BEGIN
+    interval_duration := input_interval * INTERVAL '1 day';
+    
+    IF input_symbol = 'all' THEN
+        RETURN QUERY SELECT 
+            kraken_ohlc_hour.bucket,
+            kraken_ohlc_hour.open_price,
+            kraken_ohlc_hour.high,
+            kraken_ohlc_hour.low,
+            kraken_ohlc_hour.close_price,
+            kraken_ohlc_hour.volume,
+            _symbol.symbol AS symbol
+        FROM kraken_ohlc_hour
+        JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
+        WHERE kraken_ohlc_hour.bucket >= NOW() - interval_duration
+        ORDER BY kraken_ohlc_hour.bucket;
+
+    ELSE
+        SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
+	
+        RETURN QUERY SELECT 
+            kraken_ohlc_hour.bucket,
+            kraken_ohlc_hour.open_price,
+            kraken_ohlc_hour.high,
+            kraken_ohlc_hour.low,
+            kraken_ohlc_hour.close_price,
+            kraken_ohlc_hour.volume,
+            _symbol.symbol AS symbol
+        FROM kraken_ohlc_hour
+        JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
+        WHERE kraken_ohlc_hour.symbol_id = symbol_id_result 
+        AND kraken_ohlc_hour.bucket >= NOW() - interval_duration
+        ORDER BY kraken_ohlc_hour.bucket; 
+    END IF;
+END;$$
+
+-- Example Query: SELECT * FROM get_ohlc_hour (15, 'ETHUSD');
+
+-- create ohlc (open, high, low, close) table for day
+CREATE MATERIALIZED VIEW kraken_ohlc_day 
+WITH (timescaledb.continuous) AS
+    SELECT
+        time_bucket('1 day', time) AS bucket,
+        symbol_id,
+        FIRST(price, time) AS open_price,
+        MAX(price) AS high, 
+        MIN(price) AS low,
+        LAST(price, time) AS close_price,
+        SUM(volume) AS volume
+    FROM kraken_trade
+GROUP BY bucket, symbol_id;
+
+SELECT add_continuous_aggregate_policy('kraken_ohlc_day',
+    start_offset => INTERVAL '3 day',
+    end_offset => INTERVAL '1 day',
+    schedule_interval => INTERVAL '1 day');
+
+CREATE OR REPLACE FUNCTION get_ohlc_day (
+    input_interval INTEGER, -- in days / all for all symbols
+    input_symbol TEXT 
+)
+RETURNS TABLE (
+    bucket TIMESTAMPTZ,
+    open_price NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close_price NUMERIC,
+    volume NUMERIC,
+    symbol TEXT
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE 
+symbol_id_result INTEGER;
+interval_duration INTERVAL; 
+BEGIN
+    interval_duration := input_interval * INTERVAL '1 day';
+    
+    IF input_symbol = 'all' THEN
+        RETURN QUERY SELECT 
+            kraken_ohlc_day.bucket,
+            kraken_ohlc_day.open_price,
+            kraken_ohlc_day.high,
+            kraken_ohlc_day.low,
+            kraken_ohlc_day.close_price,
+            kraken_ohlc_day.volume,
+            _symbol.symbol AS symbol
+        FROM kraken_ohlc_day
+        JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
+        WHERE kraken_ohlc_day.bucket >= NOW() - interval_duration
+        ORDER BY kraken_ohlc_day.bucket;
+
+    ELSE
+        SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
+	
+        RETURN QUERY SELECT 
+            kraken_ohlc_day.bucket,
+            kraken_ohlc_day.open_price,
+            kraken_ohlc_day.high,
+            kraken_ohlc_day.low,
+            kraken_ohlc_day.close_price,
+            kraken_ohlc_day.volume,
+            _symbol.symbol AS symbol
+        FROM kraken_ohlc_day
+        JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
+        WHERE kraken_ohlc_day.symbol_id = symbol_id_result 
+        AND kraken_ohlc_day.bucket >= NOW() - interval_duration
+        ORDER BY kraken_ohlc_day.bucket; 
+    END IF;
+END;$$
+
+
+
+
+
+-- Example Query: SELECT * FROM get_ohlc_day (15, 'ETHUSD');
+
+--CREATE MATERIALIZED VIEW one_min_candle
+--WITH (timescaledb.continuous) AS
+--    SELECT
+--        time_bucket('1 min', time) AS bucket,
+--        FIRST(price, time) AS "open",
+--        MAX(price) AS high,
+--        MIN(price) AS low,
+--        LAST(price, time) AS "close"
+--    FROM ethusd_trade
+--    GROUP BY bucket
+
+
+
+--CREATE MATERIALIZED VIEW price_one_hour_4
+--WITH (timescaledb.continuous)
+--AS SELECT symbol_id,
+--    time_bucket('1 hour'::interval, time) as bucket,
+--    stats_agg(price)
+--FROM kraken_trade
+--WHERE symbol_id = 4
+--GROUP BY bucket, symbol_id;
+
+-- not sure if this produces good results as it takes the last3 value but might use all
+-- symbols 
+--SELECT 
+--    bucket,
+--    average(rolling(stats_agg) OVER last3), 
+--    sum(rolling(stats_agg) OVER last3)
+--FROM price_one_hour
+--WHERE symbol_id = 4
+--WINDOW last3 as 
+--(ORDER BY bucket RANGE '3 hours' PRECEDING);
+
+
+-- downsample trade price values to 1 hour aggregates
+--SELECT time_bucket('1 hour'::interval, time) as bucket,  
+--	average(stats_agg(price)), 
+--	stddev(stats_agg(price)), 
+--    kraken_trade.symbol_id
+--FROM kraken_trade
+--GROUP BY bucket, symbol_id;
+
+-- downsample trade price values to 24 hour aggregates 
+--SELECT time_bucket('24 hour'::interval, time) as bucket,  
+--	average(stats_agg(response_time)), 
+--	stddev(stats_agg(response_time)),
+--    kraken_trade.symbol_id
+--FROM price
+--GROUP BY bucket, symbol_id;
+
+--CREATE MATERIALIZED VIEW price_one_hour_agg
+--WITH (timescaledb.continuous)
+--AS SELECT symbol_id,
+--    time_bucket('1 hour'::interval, time) as bucket,
+--    stats_agg(price)
+--FROM kraken_trade
+--GROUP BY 1, 2;
+
+--SELECT bucket, 
+--	average(rolling(stats_agg) OVER last30), 
+--	stddev(rolling(stats_agg) OVER last30)
+--FROM response_times_five_min
+--WHERE api_id = 32
+--WINDOW last30 as 
+--(ORDER BY bucket RANGE '30 min' PRECEDING);
 
 
 /*
@@ -111,11 +383,6 @@ CREATE TABLE IF NOT EXISTS kraken_trade_prediction (
     symbol TEXT NOT NULL 
 );
 */
-
-
-
-
-
 
 -- ALTER TABLE kraken_trade  SET UNLOGGED;
 

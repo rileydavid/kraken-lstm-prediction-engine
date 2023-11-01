@@ -100,31 +100,7 @@ impl Collector {
                     collected_trades.clear();
                 }
             }
-/*
-            if collected_trades.len() >= 5 { //figure out what a good value here would be
-                let count = collected_trades.len();
-                
-                //TODO: cloning here is not ideal 
-                match db.insert_trades(collected_trades.clone()).await {
-                    Ok(_) => {
-                        info!("Inserted {:?} Trades", count);
-                    },
-                    Err(err) => {
-                        error!("Error Occured during Insert {:?}",  err);
-                    }
-                }
-
-                // add the trades to the cache
-                for trade in &collected_trades {
-                    cache_manager.add_trade(trade.clone());
-                }
-
-                collected_trades.clear();
-
-                // check if the thread should be terminated
-               
-            } 
-   */          
+         
             if thread_info.terminate_flag.lock().unwrap().to_owned() {
                 info!("Returning from thread");
                 return None;

@@ -16,6 +16,8 @@ use actix_web::{
     Error
 };
 
+use log::info;
+
 use actix_web_actors::ws;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
@@ -73,6 +75,7 @@ pub async fn new_prediction(
 }
  */
 
+ /*
 #[get("/prediction/{symbol}/{interval}")]
 pub async fn get_prediction( 
     cache_manager: Data<CacheManager>,
@@ -97,7 +100,7 @@ pub async fn get_cached_trades(
         None => Err(ApiError::BadRequest),
     }
 }
-
+ */
 /*
 #[get("/cached_prediction/{symbol}/{interval}")]
 pub async fn get_cached_trades_prediction(
@@ -151,8 +154,9 @@ pub async fn get_trades(
     interval: Path<Interval>,
     symbol: Path<Symbol>,
     db: Data<PostgresRepository>,
+    //cache: Data<CacheManager>,
 ) -> Result<Json<Vec<Trade>>, ApiError> {
-
+    //TODO: Use cache here
     match db.get_trades(&interval.interval, &symbol.symbol).await {
         Some(trades) => Ok(Json(trades)),
         None => Err(ApiError::BadRequest),

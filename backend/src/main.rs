@@ -8,7 +8,7 @@ use dotenv::dotenv;
 
 use actix_cors::Cors;
 
-use api::endpoints::{get_trades, get_symbols, close_websocket, get_cached_trades, websocket, get_prediction /* get_cached_trades_prediction ,new_prediction */};
+use api::endpoints::{get_trades, get_symbols, close_websocket, websocket};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use log::info;
 use repository::postgresdb::PostgresRepository;
@@ -43,9 +43,9 @@ async fn main() -> std::io::Result<()> {
         .await
         .unwrap());
 
-    
-    let cache_repository = CacheManager::new();
+
     let postgres_repository = PostgresRepository::init(pgpool.clone());
+    let cache_repository = CacheManager::new(postgres_repository.clone());
 
     // this seems to work
     let collector_repository = Collector::init(pgpool.clone(), cache_repository.clone(), postgres_repository.clone());
@@ -69,12 +69,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(collector_data)
             .app_data(cache_manager_data)
             .service(get_trades)
-            //.service(get_ohlc)
             .service(get_symbols)
-            .service(get_cached_trades)
-            .service(get_prediction)
             .service(close_websocket)
-            //.service(new_prediction)
             .service(websocket)
             //.service(web::resource("/ws").route(web::get().to(websocket)))
     })
