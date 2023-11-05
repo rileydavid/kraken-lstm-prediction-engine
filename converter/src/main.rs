@@ -1,5 +1,11 @@
 use chrono::NaiveDateTime;
-use postgres::{Client, NoTls};
+
+use dotenv::dotenv;
+
+use log::info;
+use sqlx::Row;
+use sqlx::postgres::PgPoolOptions;
+
 use std::fs::read_to_string;
 use std::fs::File;
 use std::fs::Permissions;
@@ -10,23 +16,28 @@ use std::time;
 use std::{fs, thread};
 use threadpool::ThreadPool;
 
-fn main() {
-    let data_path = r#"./data/data/"#;
-    let converted_path = r#"./data/data/converted/"#;
+#[tokio::main]
+async fn main() {
+    dotenv().ok();
+
+    println!("Starting Converter");
+
+    let data_path = r#"./data/import/"#;
+    let converted_path = r#"./data/import/converted/"#;
     let ten_millis = time::Duration::from_millis(10);
     let n_workers = 7; // threads used for converions
     let pool = ThreadPool::new(n_workers);
 
-    thread::sleep(time::Duration::from_secs(20)); //wait till timescale is ready
+    let pgpool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect("postgres://admin:password@172.1.0.10:5432/db")
+        .await
+        .unwrap();
 
-    let mut client = match Client::connect("postgres://admin:password@172.1.0.10:5432/db", NoTls) {
-        Ok(it) => it,
-        Err(_err) => {
-            println!("Error can't connect");
-            return;
-        }
-    };
-
+    //
+    // TODO change back to 15-20
+    thread::sleep(time::Duration::from_secs(15)); //wait till timescale is ready
+    println!("loop");
     loop {
         if fs::read_dir(data_path).unwrap().count() > 2 {
             // check if new files have been added
@@ -36,6 +47,9 @@ fn main() {
                 let file = path.unwrap().file_name();
                 let file_name = file.as_os_str().to_str().unwrap().to_string();
 
+
+                println!("{:?}", &file_name);
+
                 if !file_name.contains("converted") && !file_name.contains("backup") {
                     while pool.active_count() == n_workers {
                         //probably not the best solution
@@ -44,7 +58,36 @@ fn main() {
                     let name = file_name.clone();
                     let data = data_path.clone();
                     let converted = converted_path.clone();
-                    pool.execute(|| convert(name, converted.to_string(), data.to_string()));
+
+                    // get the symbol id 
+                    let rows = sqlx::query("SELECT * FROM symbols")
+                    .fetch_all(&pgpool)
+                    .await;
+        
+                    let mut symbol_id: Option<i32> = None;
+    
+                    if rows.is_ok() {
+                        for row in rows.unwrap().iter() {
+                            let current_symbol: &str = row.get(1);
+                
+                            if file_name.starts_with(current_symbol) {
+                                symbol_id = Some(row.get(0));
+                            }
+                        } 
+                    }
+
+                    if symbol_id.is_none() {
+                        //INSERT INTO symbols (symbol) VALUES ('ETHUSD') RETURNING symbols.id;
+                        let rows = sqlx::query("INSERT INTO symbols (symbol) VALUES ($1) RETURNING symbols.id;").bind(&file_name.replace(".csv", "")).fetch_all(&pgpool).await;
+                        
+                        if rows.is_ok() {
+                            for row in rows.unwrap() {
+                                symbol_id = Some(row.get(0));
+                            }
+                        }
+                    }
+
+                    pool.execute(move || convert(name, converted.to_string(), data.to_string(), symbol_id.unwrap()));
                 }
             }
 
@@ -52,29 +95,27 @@ fn main() {
             pool.join();
 
             let paths = fs::read_dir(data_path).unwrap();
-            println!("Cleanup");
+            info!("Cleanup");
             //clean up directory
             for path in paths {
                 let file = path.unwrap();
-                //let file_name = file.as_os_str().to_str().unwrap().to_string();
-
                 if !file.file_name().to_str().unwrap().contains("converted")
                     && !&file.file_name().to_str().unwrap().contains("backup")
                 {
                     let _ = fs::remove_file(&file.path());
                 }
             }
-            println!("Cleanup done");
+            info!("Cleanup done");
 
             // check for new files
-            let mut paths = fs::read_dir(converted_path).unwrap();
+            let paths = fs::read_dir(converted_path).unwrap();
 
-            println!("Importing");
+            info!("Importing");
             for path in paths {
                 let file = path.unwrap();
                 let file_name = &file.file_name().as_os_str().to_str().unwrap().to_string();
-                let query = "COPY kraken_trade (time, price, volume, side, order_type, symbol) FROM '/import/data/converted/".to_owned().add(&file_name).add("' DELIMITER ',';");
-                let _ = client.batch_execute(&query.to_owned());
+                let query = "COPY kraken_trade (time, price, volume, side, order_type, symbol_id) FROM '/import/".to_owned().add(&file_name).add("' DELIMITER ',';");
+                let _ = sqlx::query(&query).execute(&pgpool).await;
                 let _ = fs::remove_file(file.path()); // remove file
             }
             println!("Import done");
@@ -84,7 +125,7 @@ fn main() {
     }
 }
 
-fn convert(file_name: String, converted_path: String, data_path: String) {
+fn convert(file_name: String, converted_path: String, data_path: String, symbol_id: i32) {
     println!("Converting: {:?}", &file_name);
 
     let mut file = match File::create(converted_path.to_owned() + &file_name) {
@@ -116,8 +157,9 @@ fn convert(file_name: String, converted_path: String, data_path: String) {
                 2 => {
                     converted.insert(
                         index,
-                        part.to_string() + ",,," + &file_name.replace(".csv", "") + "\n",
+                        part.to_string() + ",,," + &symbol_id.to_string() + "\n",
                     );
+                    //&file_name.replace(".csv", "")
                 }
                 _ => {
                     converted.insert(index, part.to_string());

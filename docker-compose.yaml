@@ -25,7 +25,7 @@ services:
       PGTZ: 'GMT+0'
     volumes:
       - ./data/timescale:/pg-data
-      - ./data/:/import/
+      - ./data/import/converted:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
   pgadmin4: 
@@ -89,13 +89,13 @@ services:
   #    network:
   #      ipv4_address: 172.1.0.15
 
-  #converter: 
-  #  build: ./converter
-  #  container_name: converter
-  #  restart: no
-  #  volumes:
-  #    - ./data/:/data
-  #  networks:
-  #    network:
-  #      ipv4_address: 172.1.0.99
+  converter: 
+    build: ./converter
+    container_name: converter
+    restart: no
+    volumes:
+      - ./data/:/data
+    networks:
+      network:
+        ipv4_address: 172.1.0.99
 

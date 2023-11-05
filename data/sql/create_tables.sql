@@ -1,5 +1,32 @@
 
 -- import historical data missing here
+-- it might be possible to convert the epoch ms field into a date using https://stackoverflow.com/questions/16609722/postgresql-how-to-convert-from-unix-epoch-to-date
+-- issue symbol this might require a look up similar to insert
+
+-- FIRST DRAFT UNTESTED
+
+-- Create the procedure
+/*
+CREATE OR REPLACE FUNCTION insert_data_from_csv(csv_filename text, symbol text) RETURNS VOID AS $$
+DECLARE
+    symbol_id integer;
+BEGIN
+    -- Check if the symbol already exists in the symbols table
+    SELECT id INTO symbol_id FROM symbols WHERE symbol = symbol;
+    
+    -- If the symbol doesn't exist, insert it into the symbols table
+    IF symbol_id IS NULL THEN
+        INSERT INTO symbols (symbol) VALUES (symbol) RETURNING id INTO symbol_id;
+    END IF;
+
+    -- Read and insert data from the CSV file
+    COPY kraken_trade (time, price, volume, side, order_type, symbol_id)
+    FROM csv_filename WITH CSV;
+
+END;
+$$ LANGUAGE plpgsql;
+*/
+
 
 -- not sure if it is a good idea to use NUMERIC instead of double precision 
 -- https://stackoverflow.com/questions/20884405/is-there-a-performance-hit-using-decimal-data-types-mysql-postgres
@@ -22,6 +49,30 @@ CREATE TABLE IF NOT EXISTS symbols (
 
 -- index for symbols
 CREATE INDEX idx_symbols_symbol ON symbols (symbol);
+
+CREATE OR REPLACE PROCEDURE insert_trade (
+    _time TIMESTAMPTZ,
+    _price NUMERIC,  
+    _volume NUMERIC, 
+    _side TEXT,
+    _order_type TEXT,
+    _symbol TEXT
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE symbol_result INTEGER;
+BEGIN
+    SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
+
+    IF symbol_result IS NULL THEN
+        INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
+    END IF;
+
+    INSERT INTO kraken_trade (time, price, volume, side, order_type, symbol_id) 
+    VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
+
+    COMMIT;
+END;$$;
 
 CREATE OR REPLACE FUNCTION get_trades (
     input_interval INTEGER, -- in minutes
@@ -71,63 +122,10 @@ BEGIN
         AND kraken_trade.time >= NOW() - interval_duration
         ORDER BY kraken_trade.time; 
     END IF;
-END;$$
+END;$$;
+
 -- Example: SELECT * FROM get_trades (15, 'ETHUSD');
 
-CREATE OR REPLACE FUNCTION get_all_trades (
-    input_interval INTEGER -- in minutes
-)
-RETURNS TABLE (
-    time_ TIMESTAMPTZ,
-    price NUMERIC,
-    volume NUMERIC, 
-    side TEXT,
-    order_type TEXT,
-    symbol TEXT
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE 
-interval_duration INTERVAL; 
-BEGIN
-	interval_duration := input_interval * INTERVAL '1 minute';
-    -- get all (all symbols) trades from a give interval 
-    RETURN QUERY SELECT kraken_trade.time,
-        kraken_trade.price,
-        kraken_trade.volume,
-        kraken_trade.side,
-        kraken_trade.order_type,
-        _symbol.symbol
-    FROM kraken_trade
-    JOIN symbols AS _symbol ON kraken_trade.symbol_id = _symbol.id 
-    WHERE kraken_trade.time >= NOW() - interval_duration
-    ORDER BY kraken_trade.time;
-END;$$
--- Example: SELECT * FROM get_all_trades (15);
-
-CREATE OR REPLACE PROCEDURE insert_trade (
-    _time TIMESTAMPTZ,
-    _price NUMERIC,  
-    _volume NUMERIC, 
-    _side TEXT,
-    _order_type TEXT,
-    _symbol TEXT
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE symbol_result INTEGER;
-BEGIN
-    SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
-
-    IF symbol_result IS NULL THEN
-        INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
-    END IF;
-
-    INSERT INTO kraken_trade (time, price, volume, side, order_type, symbol_id) 
-    VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
-
-    COMMIT;
-END;$$
 
 -- create ohlc (open, high, low, close) table for hour
 CREATE MATERIALIZED VIEW kraken_ohlc_hour
@@ -201,7 +199,7 @@ BEGIN
         AND kraken_ohlc_hour.bucket >= NOW() - interval_duration
         ORDER BY kraken_ohlc_hour.bucket; 
     END IF;
-END;$$
+END;$$;
 
 -- Example Query: SELECT * FROM get_ohlc_hour (15, 'ETHUSD');
 
@@ -276,8 +274,67 @@ BEGIN
         AND kraken_ohlc_day.bucket >= NOW() - interval_duration
         ORDER BY kraken_ohlc_day.bucket; 
     END IF;
-END;$$
+END;$$;
 
+
+/*
+
+
+CREATE OR REPLACE FUNCTION get_all_trades (
+    input_interval INTEGER -- in minutes
+)
+RETURNS TABLE (
+    time_ TIMESTAMPTZ,
+    price NUMERIC,
+    volume NUMERIC, 
+    side TEXT,
+    order_type TEXT,
+    symbol TEXT
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE 
+interval_duration INTERVAL; 
+BEGIN
+	interval_duration := input_interval * INTERVAL '1 minute';
+    -- get all (all symbols) trades from a give interval 
+    RETURN QUERY SELECT kraken_trade.time,
+        kraken_trade.price,
+        kraken_trade.volume,
+        kraken_trade.side,
+        kraken_trade.order_type,
+        _symbol.symbol
+    FROM kraken_trade
+    JOIN symbols AS _symbol ON kraken_trade.symbol_id = _symbol.id 
+    WHERE kraken_trade.time >= NOW() - interval_duration
+    ORDER BY kraken_trade.time;
+END;$$
+-- Example: SELECT * FROM get_all_trades (15);
+
+CREATE OR REPLACE PROCEDURE insert_trade (
+    _time TIMESTAMPTZ,
+    _price NUMERIC,  
+    _volume NUMERIC, 
+    _side TEXT,
+    _order_type TEXT,
+    _symbol TEXT
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE symbol_result INTEGER;
+BEGIN
+    SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
+
+    IF symbol_result IS NULL THEN
+        INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
+    END IF;
+
+    INSERT INTO kraken_trade (time, price, volume, side, order_type, symbol_id) 
+    VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
+
+    COMMIT;
+END;$$
+*/
 
 
 
