@@ -9,7 +9,7 @@ edition = "2021"
 chrono = "0.4.30"
 sqlx = { version = "0.7.2", features = [ "runtime-tokio-native-tls" , "postgres" , "bigdecimal", "chrono"] }
 log = "0.4.20"
-#env_logger = "0.10.0"
+env_logger = "0.10.0"
 threadpool = "1.8.1"
 tokio = { version = "1.20", features = ["full"] } # full is probably overkill here
 openssl = { version = "0.10", features = ["vendored"] }

@@ -2,7 +2,8 @@ use chrono::NaiveDateTime;
 
 use dotenv::dotenv;
 
-use log::info;
+use env_logger;
+use log::{info, error};
 use sqlx::Row;
 use sqlx::postgres::PgPoolOptions;
 
@@ -18,9 +19,12 @@ use threadpool::ThreadPool;
 
 #[tokio::main]
 async fn main() {
+    // load env configuration --> DB URL, etc
     dotenv().ok();
 
-    println!("Starting Converter");
+    // init logging
+    env_logger::init();
+    info!("Starting Converter");
 
     let data_path = r#"./data/import/"#;
     let converted_path = r#"./data/import/converted/"#;
@@ -34,10 +38,8 @@ async fn main() {
         .await
         .unwrap();
 
-    //
-    // TODO change back to 15-20
     thread::sleep(time::Duration::from_secs(15)); //wait till timescale is ready
-    println!("loop");
+
     loop {
         if fs::read_dir(data_path).unwrap().count() > 2 {
             // check if new files have been added
@@ -46,9 +48,6 @@ async fn main() {
             for path in paths {
                 let file = path.unwrap().file_name();
                 let file_name = file.as_os_str().to_str().unwrap().to_string();
-
-
-                println!("{:?}", &file_name);
 
                 if !file_name.contains("converted") && !file_name.contains("backup") {
                     while pool.active_count() == n_workers {
@@ -118,7 +117,7 @@ async fn main() {
                 let _ = sqlx::query(&query).execute(&pgpool).await;
                 let _ = fs::remove_file(file.path()); // remove file
             }
-            println!("Import done");
+            info!("Import done");
         } else {
             thread::sleep(time::Duration::from_secs(60)) // check again in 1 min
         }
@@ -126,12 +125,10 @@ async fn main() {
 }
 
 fn convert(file_name: String, converted_path: String, data_path: String, symbol_id: i32) {
-    println!("Converting: {:?}", &file_name);
-
     let mut file = match File::create(converted_path.to_owned() + &file_name) {
         Ok(it) => it,
         Err(err) => {
-            println!("Error could not open file {}, error :{}", file_name, err);
+            error!("Error could not open file {}, error :{}", file_name, err);
             return;
         }
     };
@@ -169,7 +166,7 @@ fn convert(file_name: String, converted_path: String, data_path: String, symbol_
 
         match file.write_all(converted.join(",").as_bytes()) {
             Ok(it) => it,
-            Err(err) => println!("Could not save file {}", err),
+            Err(err) => error!("Could not save file {}", err),
         };
     }
 }
