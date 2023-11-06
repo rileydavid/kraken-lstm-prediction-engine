@@ -34,7 +34,7 @@ async fn main() {
 
     let pgpool = PgPoolOptions::new()
         .max_connections(1)
-        .connect("postgres://admin:password@172.1.0.10:5432/db")
+        .connect(&std::env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
 

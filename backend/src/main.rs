@@ -25,6 +25,9 @@ use sqlx::postgres::PgPoolOptions;
  * 
 */
 
+// TODO: Take a look at this project and think about the organization of files 
+// https://github.com/AleksandrNi/axum-rest-service
+
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

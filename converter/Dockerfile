@@ -22,6 +22,7 @@ FROM alpine
 WORKDIR /
 
 COPY --from=builder /converter/target/x86_64-unknown-linux-musl/release/converter ./
+COPY --from=builder /converter/.env ./
 
 RUN mkdir data
 
