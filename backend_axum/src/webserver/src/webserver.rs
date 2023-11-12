@@ -8,8 +8,10 @@ use utils::core::webserver_config::get_address;
 pub async fn run() {
     let app = Router::new()
         .route("/ping", get(ping))
+        .merge(routes::ohlc::routes::router().await)
+        .merge(routes::symbol::routes::router().await)
+        .merge(routes::convert::routes::router().await)
         .merge(routes::trade::routes::router().await);
-    //.merge(routes::convert::routes::router().await);
 
     let adress = SocketAddr::from(get_address().await);
 

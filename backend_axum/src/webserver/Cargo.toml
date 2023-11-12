@@ -10,7 +10,7 @@ service = {path = "../service"}
 repository = { path = "../repository" }
 
 # external
-axum = { version = "0.6.2", features = ["headers", "macros"] }
+axum = { version = "0.6.2", features = ["headers", "macros", "multipart"] }
 chrono = "0.4.23"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.23", features = ["macros", "rt-multi-thread"] }
