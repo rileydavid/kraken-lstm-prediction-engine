@@ -1,0 +1,19 @@
+[package]
+name = "utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# internal
+api = { path = "../api" }
+
+# external
+tokio = { version = "1.23", features = ["full"]}
+sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+axum = { version = "0.6.2", features = ["headers", "macros"] }
+jsonwebtoken = "9.1.0"
+serde = { version = "1.0", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.15", features = ["env-filter"]}
+chrono = "0.4"
+async-trait = "0.1"

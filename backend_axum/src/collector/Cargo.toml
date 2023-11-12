@@ -1,0 +1,20 @@
+[package]
+name = "collector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# internal 
+utils = { path = "../utils" }
+service = {path = "../service"}
+repository = { path = "../repository" }
+
+# external 
+tungstenite = { version = "0.20.0", features = ["rustls-tls-native-roots"] }
+serde_json = "1.0.106" ## parse trade
+tracing = "0.1.37"
+serde = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+chrono = { version = "0.4.23", features = ["serde"]}
+bigdecimal = {version = "0.3.1", features = ["serde"]} # this version is compatibles with sqlx bigdecimal
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

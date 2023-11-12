@@ -1,0 +1,17 @@
+[package]
+name = "trade_backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# internal
+api = { path = "src/api" }
+utils = { path ="src/utils" }
+repository = { path = "src/repository" }
+webserver = { path = "src/webserver"}
+collector = {path = "src/collector"}
+
+# external 
+tokio = { version = "1.23", features = ["macros", "rt-multi-thread"] }
+dotenv = "0.15.0"
+tracing = "0.1.37"

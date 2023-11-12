@@ -42,7 +42,44 @@ services:
       PGADMIN_DEFAULT_PASSWORD: 'password'
     volumes:
       - ./data/pgadmin:/var/lib/pgadmin
-      
+  
+
+  # Does not work yet!
+  # https://github.com/aganse/docker_mlflow_db/blob/main/mlflow/Dockerfile
+  mlflow:
+    build: ./mlflow
+    image: mlflow_server
+    container_name: mlflow_server
+    restart: always
+    ports:
+      - "5000:5000"
+    expose:
+      - 5000
+    networks:
+      network:
+        ipv4_address: 172.1.0.12
+    #environment:
+    #  - BACKEND=postgresql://admin:password@172.1.0.10:5432/mlflowdb
+    #  - ARTIFACTS=/storage/mlruns  # in-container path to filestore in filesys
+    volumes:
+      - "./data/mlruns:/storage/mlruns"
+    #  - "./data/condaenv:/opt/conda"
+    #command: [
+    #  "mlflow", "server", # something is not right here
+    #  "--backend-store-uri", "postgresql://admin:password@172.1.0.10:5432/mlflowdb",
+    #  "--default-artifact-root", "/storage/mlruns ",
+    #  "--host", "0.0.0.0"
+    #]
+    #command: 
+    #  - sh    # (sh allows for var substitution of BACKEND and ARTIFACTS)
+    #  - -c
+    #  - mlflow 
+    #      --port 5000
+    #      --host 0.0.0.0 
+    #      --backend-store-uri $${BACKEND} 
+    #      --default-artifact-root $${ARTIFACTS}
+
+
   #grafana:
   #  image: grafana/grafana-oss
   #  container_name: grafana
@@ -89,13 +126,13 @@ services:
   #    network:
   #      ipv4_address: 172.1.0.15
 
-  converter: 
-    build: ./converter
-    container_name: converter
-    restart: no
-    volumes:
-      - ./data/:/data
-    networks:
-      network:
-        ipv4_address: 172.1.0.99
+  #converter: 
+  #  build: ./converter
+  #  container_name: converter
+  #  restart: no
+  #  volumes:
+  #    - ./data/:/data
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.99
 

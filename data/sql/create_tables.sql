@@ -70,8 +70,6 @@ BEGIN
 
     INSERT INTO kraken_trade (time, price, volume, side, order_type, symbol_id) 
     VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
-
-    COMMIT;
 END;$$;
 
 CREATE OR REPLACE FUNCTION get_trades (
