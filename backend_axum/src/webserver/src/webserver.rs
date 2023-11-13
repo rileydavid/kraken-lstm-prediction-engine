@@ -10,7 +10,7 @@ pub async fn run() {
         .route("/ping", get(ping))
         .merge(routes::ohlc::routes::router().await)
         .merge(routes::symbol::routes::router().await)
-        .merge(routes::convert::routes::router().await)
+        //.merge(routes::convert::routes::router().await)
         .merge(routes::trade::routes::router().await);
 
     let adress = SocketAddr::from(get_address().await);

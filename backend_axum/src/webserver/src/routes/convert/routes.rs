@@ -1,11 +1,10 @@
 
-use crate::routes::convert::handlers::file_upload;
+use crate::routes::convert::handlers::convert;
 use axum::extract::DefaultBodyLimit;
 use axum::routing::post;
 use axum::Router;
 
 pub async fn router() -> Router {
     Router::new()
-    .route("/upload", post(file_upload))
-    .layer(DefaultBodyLimit::max(10240))
+    .route("/convert/:file_name/:currencypair", get(convert))
 }
