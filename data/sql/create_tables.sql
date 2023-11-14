@@ -27,6 +27,7 @@ END;
 $$ LANGUAGE plpgsql;
 */
 
+CREATE DATABASE mlflow;
 
 -- not sure if it is a good idea to use NUMERIC instead of double precision 
 -- https://stackoverflow.com/questions/20884405/is-there-a-performance-hit-using-decimal-data-types-mysql-postgres
@@ -44,12 +45,39 @@ SELECT create_hypertable('kraken_trade', 'time', migrate_data => true);
 
 CREATE TABLE IF NOT EXISTS symbols (
     id SERIAL PRIMARY KEY,
-    symbol TEXT NOT NULL 
+    symbol TEXT NOT NULL UNIQUE
 );
 
 -- index for symbols
 CREATE INDEX idx_symbols_symbol ON symbols (symbol);
 
+CREATE OR REPLACE FUNCTION insert_symbol(
+    input_symbol text
+)
+RETURNS TABLE(
+    out_id INTEGER, 
+    out_symbol TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Try to insert the new symbol
+    INSERT INTO symbols (symbol)
+    VALUES (input_symbol)
+    ON CONFLICT (symbol) DO NOTHING
+    RETURNING id INTO out_id;
+
+    -- If the insert did not happen, select the existing row
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT id, symbol FROM symbols WHERE symbol = input_symbol;
+    ELSE
+        out_symbol := input_symbol;
+        RETURN NEXT;
+    END IF;
+END;
+$$;
+
+--
 CREATE OR REPLACE PROCEDURE insert_trade (
     _time TIMESTAMPTZ,
     _price NUMERIC,  

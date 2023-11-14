@@ -1,8 +1,4 @@
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgRow;
-use sqlx::Row;
-
-//TODO: maybe an array would be better suited
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConvertModel {

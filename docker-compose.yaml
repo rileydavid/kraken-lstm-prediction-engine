@@ -25,7 +25,7 @@ services:
       PGTZ: 'GMT+0'
     volumes:
       - ./data/timescale:/pg-data
-      - ./data/import/converted:/import/
+      - ./data/import/:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
 
   pgadmin4: 
@@ -79,6 +79,17 @@ services:
     #      --backend-store-uri $${BACKEND} 
     #      --default-artifact-root $${ARTIFACTS}
 
+  backend: 
+    build: ./backend_axum
+    container_name: backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/import/:/import/
+    networks:
+      network:
+        ipv4_address: 172.1.0.14
 
   #grafana:
   #  image: grafana/grafana-oss

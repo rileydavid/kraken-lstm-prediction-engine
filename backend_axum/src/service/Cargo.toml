@@ -10,3 +10,4 @@ repository = { path = "../repository" }
 serde = "1.0.152"
 bigdecimal = {version = "0.3.1", features = ["serde"]} # sqlx compatible
 chrono = {version = "0.4.31",features = ["serde"]}
+tracing = "0.1.37"

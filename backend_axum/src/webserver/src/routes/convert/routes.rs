@@ -1,10 +1,9 @@
 
 use crate::routes::convert::handlers::convert;
-use axum::extract::DefaultBodyLimit;
-use axum::routing::post;
 use axum::Router;
+use axum::routing::get;
 
 pub async fn router() -> Router {
     Router::new()
-    .route("/convert/:file_name/:currencypair", get(convert))
+    .route("/convert/:file_name/:symbol", get(convert))
 }
