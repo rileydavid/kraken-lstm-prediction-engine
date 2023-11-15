@@ -1,5 +1,4 @@
 use service::symbol::symbol_service;
-//use utils::error::generic_error::GenericError;
 use crate::utils::error::prepare_response;
 use crate::utils::error::ResponseError;
 use axum::Json;

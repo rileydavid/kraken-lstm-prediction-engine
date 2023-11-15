@@ -1,15 +1,12 @@
 use crate::domain::symbol::SymbolModel;
 use sqlx::postgres::PgRow;
 use sqlx::{Postgres, Transaction};
-use tracing::info;
 use utils::error::generic_error::GenericError;
 use utils::error::repository_error::RepositoryError;
 
-const QUERY_SELECT_SYMBOLS: &str = "SELECT id AS out_id, symbol AS out_symbol FROM symbols";
-
-//TODO: SOMETHING is worng here with inserting a symbol as it does not insert 
+const QUERY_SELECT_SYMBOLS: &str = "SELECT id AS out_id, symbol AS out_symbol FROM symbols;";
 const QUERY_INSERT_SYMBOL_RETURNING_ID_SYMBOL: &str =
-    "SELECT * FROM insert_symbol($1)";
+    "SELECT * FROM insert_symbol($1);";
 
 pub async fn get_symbols(
     tx: &mut Transaction<'static, Postgres>,
@@ -25,11 +22,10 @@ pub async fn get_symbols(
     }
 }
 
-async fn insert_symbol(
+pub async fn insert_symbol(
     tx: &mut Transaction<'static, Postgres>,
     symbol: String,
 ) -> Result<SymbolModel, GenericError> {
-    info!("insert symbol {:?}", symbol);
     match sqlx::query(QUERY_INSERT_SYMBOL_RETURNING_ID_SYMBOL)
         .bind(symbol)
         .map(|row: PgRow| SymbolModel::from(row))

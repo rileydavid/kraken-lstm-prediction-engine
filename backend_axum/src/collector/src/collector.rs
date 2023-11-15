@@ -9,10 +9,13 @@ use utils::core::postgresdb::{Tx, TxAsync};
 
 const CONST_ETHUSD_SUB: &str =
     "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"ETH/USD\"]}";
+
+/*
 const CONST_XBTUSD_SUB: &str =
     "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"XBT/USD\"]}";
+ */
 
-const SUBSCRIPTIONS: [&str; 2] = [CONST_ETHUSD_SUB, CONST_XBTUSD_SUB];
+const SUBSCRIPTIONS: [&str; 1] = [CONST_ETHUSD_SUB];
 
 pub async fn run() {
     info!("Starting Collector");

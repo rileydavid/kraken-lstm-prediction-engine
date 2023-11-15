@@ -1,24 +1,24 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ConvertModel {
+pub struct ImportModel {
     file_name: String,
     symbol: String
 }
 
-impl ConvertModel {
+impl ImportModel {
     pub fn new(
         file_name: String,
         symbol: String,
-    ) -> ConvertModel {
-        ConvertModel {
+    ) -> ImportModel {
+        ImportModel {
             file_name,
             symbol
         }
     }
 }
 
-impl ConvertModel {
+impl ImportModel {
     pub fn get_file_name(&self) -> &str {
         &self.file_name[..]
     }
