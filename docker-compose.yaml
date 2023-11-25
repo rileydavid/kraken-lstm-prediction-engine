@@ -11,15 +11,15 @@ services:
     image: timescale/timescaledb-ha:pg15-latest
     container_name: timescaledb
     ports:
-      - "5432:5432"
+      - "5432:${PG_PORT}"
     networks:
       network:
         ipv4_address: 172.1.0.10
     restart: always
     environment:
-      POSTGRES_DB: 'db'
-      POSTGRES_USER: 'admin'
-      POSTGRES_PASSWORD: 'password'
+      POSTGRES_DB: ${PG_USER}  #'db'
+      POSTGRES_USER: ${PG_DATABASE} #'admin'
+      POSTGRES_PASSWORD: ${PG_PASSWORD} # 'password'
       PGDATA: '/pg-data'
       TZ: 'GMT+0'
       PGTZ: 'GMT+0'
@@ -27,58 +27,78 @@ services:
       - ./data/timescale:/pg-data
       - ./data/import/:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    # needs to be tested 
+    #healthcheck: 
+    #  test: ["CMD", "pg_isready", "-p", "5432", "-U", "admin"]
+    #  interval: 5s
+    #  timeout: 5s
+    #  retries: 3
 
   pgadmin4: 
     image: dpage/pgadmin4
     container_name: pgadmin4
     restart: always
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT}:80"
     networks:
       network:
         ipv4_address: 172.1.0.11
     environment:
-      PGADMIN_DEFAULT_EMAIL: 'rileydavid@live.at'
-      PGADMIN_DEFAULT_PASSWORD: 'password'
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL} # 'rileydavid@live.at'
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD} # 'password'
     volumes:
       - ./data/pgadmin:/var/lib/pgadmin
-  
 
-  # Does not work yet!
-  # https://github.com/aganse/docker_mlflow_db/blob/main/mlflow/Dockerfile
-  mlflow:
-    build: ./mlflow
-    image: mlflow_server
-    container_name: mlflow_server
+
+  # https://blog.min.io/setting-up-a-development-machine-with-mlflow-and-minio/
+  # storage for mlflow models
+  s3:
     restart: always
+    image: minio/minio
+    container_name: mlflow_minio
+    volumes:
+      - ./data/minio:/data
     ports:
-      - "5000:5000"
-    expose:
-      - 5000
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
     networks:
       network:
         ipv4_address: 172.1.0.12
-    #environment:
-    #  - BACKEND=postgresql://admin:password@172.1.0.10:5432/mlflowdb
-    #  - ARTIFACTS=/storage/mlruns  # in-container path to filestore in filesys
-    volumes:
-      - "./data/mlruns:/storage/mlruns"
-    #  - "./data/condaenv:/opt/conda"
-    #command: [
-    #  "mlflow", "server", # something is not right here
-    #  "--backend-store-uri", "postgresql://admin:password@172.1.0.10:5432/mlflowdb",
-    #  "--default-artifact-root", "/storage/mlruns ",
-    #  "--host", "0.0.0.0"
-    #]
-    #command: 
-    #  - sh    # (sh allows for var substitution of BACKEND and ARTIFACTS)
-    #  - -c
-    #  - mlflow 
-    #      --port 5000
-    #      --host 0.0.0.0 
-    #      --backend-store-uri $${BACKEND} 
-    #      --default-artifact-root $${ARTIFACTS}
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_ADDRESS=${MINIO_ADDRESS}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_STORAGE_USE_HTTPS=${MINIO_STORAGE_USE_HTTPS}
+      - MINIO_CONSOLE_ADDRESS=${MINIO_CONSOLE_ADDRESS}
+    command: server /data
 
+  mlflow:
+    restart: always
+    build: ./mlflow
+    image: mlflow_server
+    container_name: mlflow_server
+    depends_on:
+      - timescaledb
+    ports:
+      - "${MLFLOW_PORT}:5000"
+    networks:
+      network:
+        ipv4_address: 172.1.0.13
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:2000
+      - MLFLOW_S3_IGNORE_TLS=true
+    volumes:
+      - ./data/mlruns/models:/data
+    command: >
+      mlflow server 
+        --backend-store-uri postgresql://${PG_USER}:${PG_PASSWORD}@172.1.0.10:${PG_PORT}/${PG_DATABASE_MLFLOW} 
+        --host 0.0.0.0 
+        --serve-artifacts 
+        --default-artifact-root s3://${MLFLOW_BUCKET_NAME}
+        
   backend: 
     build: ./backend_axum
     container_name: backend
@@ -90,6 +110,17 @@ services:
     networks:
       network:
         ipv4_address: 172.1.0.14
+
+  #frontend: 
+  #  build: ./frontend-angular
+  #  container_name: frontend-angular
+  #  restart: always
+  #  ports:
+  #    - "3000:80"
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.15
+
 
   #grafana:
   #  image: grafana/grafana-oss
@@ -108,42 +139,4 @@ services:
   #    - ./data/grafana:/var/lib/grafana
   #    - ./data/grafana/config/defaults.ini:/etc/grafana/custom.ini
   #  user: "472"
-    
-  #collector:
-  #  build: ./collector
-  #  container_name: collector
-  #  restart: always
-  #  networks:
-  #    network:
-  #      ipv4_address: 172.1.0.13
-
-  #backend: 
-  #  build: ./backend
-  #  container_name: backend
-  #  restart: always
-  #  ports:
-  #    - "8000:8000"
-  #  networks:
-  #    network:
-  #      ipv4_address: 172.1.0.14
-
-  #frontend: 
-  #  build: ./frontend-angular
-  #  container_name: frontend-angular
-  #  restart: always
-  #  ports:
-  #    - "3000:80"
-  #  networks:
-  #    network:
-  #      ipv4_address: 172.1.0.15
-
-  #converter: 
-  #  build: ./converter
-  #  container_name: converter
-  #  restart: no
-  #  volumes:
-  #    - ./data/:/data
-  #  networks:
-  #    network:
-  #      ipv4_address: 172.1.0.99
 
