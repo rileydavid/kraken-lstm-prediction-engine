@@ -1,32 +1,5 @@
 
--- import historical data missing here
--- it might be possible to convert the epoch ms field into a date using https://stackoverflow.com/questions/16609722/postgresql-how-to-convert-from-unix-epoch-to-date
--- issue symbol this might require a look up similar to insert
-
--- FIRST DRAFT UNTESTED
-
--- Create the procedure
-/*
-CREATE OR REPLACE FUNCTION insert_data_from_csv(csv_filename text, symbol text) RETURNS VOID AS $$
-DECLARE
-    symbol_id integer;
-BEGIN
-    -- Check if the symbol already exists in the symbols table
-    SELECT id INTO symbol_id FROM symbols WHERE symbol = symbol;
-    
-    -- If the symbol doesn't exist, insert it into the symbols table
-    IF symbol_id IS NULL THEN
-        INSERT INTO symbols (symbol) VALUES (symbol) RETURNING id INTO symbol_id;
-    END IF;
-
-    -- Read and insert data from the CSV file
-    COPY kraken_trade (time, price, volume, side, order_type, symbol_id)
-    FROM csv_filename WITH CSV;
-
-END;
-$$ LANGUAGE plpgsql;
-*/
-
+-- create database for mlflow parameter tracking 
 CREATE DATABASE mlflow;
 
 -- not sure if it is a good idea to use NUMERIC instead of double precision 
@@ -77,7 +50,6 @@ BEGIN
 END;
 $$;
 
---
 CREATE OR REPLACE PROCEDURE insert_trade (
     _time TIMESTAMPTZ,
     _price NUMERIC,  
@@ -152,7 +124,6 @@ END;$$;
 
 -- Example: SELECT * FROM get_trades (15, 'ETHUSD');
 
-
 -- create ohlc (open, high, low, close) table for hour
 CREATE MATERIALIZED VIEW kraken_ohlc_hour
 WITH (timescaledb.continuous) AS
@@ -163,7 +134,8 @@ WITH (timescaledb.continuous) AS
         MAX(price) AS high, 
         MIN(price) AS low,
         LAST(price, time) AS close_price,
-        SUM(volume) AS volume
+        SUM(volume) AS volume,
+        CAST(COUNT(*) AS INTEGER) AS count -- this could lead to an overflow if more than 2,147,483,647 trades occur in one hour highest value was 25k
     FROM kraken_trade
 GROUP BY bucket, symbol_id;
 
@@ -184,6 +156,7 @@ RETURNS TABLE (
     low NUMERIC,
     close_price NUMERIC,
     volume NUMERIC,
+    count INTEGER,
     symbol TEXT
 )
 LANGUAGE plpgsql    
@@ -202,6 +175,7 @@ BEGIN
             kraken_ohlc_hour.low,
             kraken_ohlc_hour.close_price,
             kraken_ohlc_hour.volume,
+            kraken_ohlc_hour.count,
             _symbol.symbol AS symbol
         FROM kraken_ohlc_hour
         JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
@@ -218,6 +192,7 @@ BEGIN
             kraken_ohlc_hour.low,
             kraken_ohlc_hour.close_price,
             kraken_ohlc_hour.volume,
+            kraken_ohlc_hour.count,
             _symbol.symbol AS symbol
         FROM kraken_ohlc_hour
         JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
@@ -239,7 +214,8 @@ WITH (timescaledb.continuous) AS
         MAX(price) AS high, 
         MIN(price) AS low,
         LAST(price, time) AS close_price,
-        SUM(volume) AS volume
+        SUM(volume) AS volume,
+        CAST(COUNT(*) AS INTEGER) AS count
     FROM kraken_trade
 GROUP BY bucket, symbol_id;
 
@@ -277,6 +253,7 @@ BEGIN
             kraken_ohlc_day.low,
             kraken_ohlc_day.close_price,
             kraken_ohlc_day.volume,
+            kraken_ohlc_day.count,
             _symbol.symbol AS symbol
         FROM kraken_ohlc_day
         JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
@@ -293,6 +270,7 @@ BEGIN
             kraken_ohlc_day.low,
             kraken_ohlc_day.close_price,
             kraken_ohlc_day.volume,
+            kraken_ohlc_day.count,
             _symbol.symbol AS symbol
         FROM kraken_ohlc_day
         JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 

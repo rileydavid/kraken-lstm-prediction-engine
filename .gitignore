@@ -19,5 +19,6 @@ Cargo.lock
 /data/grafana
 /data/pgadmin
 /data/timescale
+/data/minio
 /prediction-model/*.csv
 

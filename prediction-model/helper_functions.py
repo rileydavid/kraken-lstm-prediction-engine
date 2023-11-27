@@ -38,7 +38,7 @@ def add_feature_high_low_range(data):
 def add_feature_lag(data, lags=[1]): 
     for lag in lags: 
         data['close_lag'+str(lag)] = data['close_price'].shift(lag)
-    data = data.dropna() ## drop first few rows that are now NaN
+    #data = data.dropna() ## drop first few rows that are now NaN
     return data
 
 ## cyclic encoding for time based features
@@ -96,7 +96,8 @@ def process_timestamp(data):
     data = data.resample('H').asfreq()
     data['close_price'] = data['close_price'].fillna(method='ffill') # carry over values from last hour 
     data['volume'] = data['volume'].fillna(0) # fill missing values with 0 because there have been no trades 
-    data.sort_values('bucket', inplace=True)
+    data['count'] = data['count'].fillna(0)
+    #data.sort_values('bucket', inplace=True)
     data.reset_index(inplace=True)
     return data
 

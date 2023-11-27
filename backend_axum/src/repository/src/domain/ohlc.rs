@@ -13,6 +13,7 @@ pub struct OhlcModel {
     low: BigDecimal,
     close_price: BigDecimal,
     volume: BigDecimal,
+    count: i32,
     symbol: String,
 }
 
@@ -24,6 +25,7 @@ impl OhlcModel {
         low: BigDecimal,
         close_price: BigDecimal,
         volume: BigDecimal,
+        count: i32,
         symbol: String,
     ) -> OhlcModel {
         OhlcModel {
@@ -33,6 +35,7 @@ impl OhlcModel {
             low,
             close_price,
             volume,
+            count,
             symbol,
         }
     }
@@ -56,6 +59,9 @@ impl OhlcModel {
     }
     pub fn get_volume(&self) -> &BigDecimal {
         &self.volume
+    }
+    pub fn get_count(&self) -> &i32 {
+        &self.count
     }
     pub fn get_symbol(&self) -> &str {
         &self.symbol[..]
@@ -99,6 +105,7 @@ impl From<PgRow> for OhlcModel {
             value.get("low"),
             value.get("close_price"),
             value.get("volume"),
+            value.get("count"),
             value.get("symbol"),
         )
     }
