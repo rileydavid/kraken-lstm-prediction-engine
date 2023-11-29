@@ -4,6 +4,16 @@ import holidays
 from calendar import monthrange
 from sklearn.preprocessing import StandardScaler
 
+# Data Preperation as input for model training/prediction 
+def create_sequences_np(data, features, lookback, datatype=np.float16):
+    data_array = data[features].to_numpy()
+    X, y = [], []
+    for i in range(lookback, len(data_array)):
+        X.append(data_array[i-lookback:i])
+        y.append(data_array[i, data.columns.get_loc('close_price')])
+    return np.array(X).astype(datatype), np.array(y).astype(datatype)
+
+# Feature Engineering
 def convert_timestamp(data): 
     data['bucket'] = pd.to_datetime(data['bucket'])
     data.sort_values('bucket', inplace=True)
@@ -89,19 +99,32 @@ def apply_day_of_month_encoding(data):
     data["day_of_month_cos"] = data.apply(lambda row: encode_day_of_month(row['day_of_month'], row['month'], row['year'], 'cos'), axis=1)
     return data
 
-def process_timestamp(data): 
+def process_timestamp(data, fill=False): 
     # fills in gaps in the dataset and creates 1 hour buckets
     data['bucket'] = pd.to_datetime(data['bucket'])
     data.set_index('bucket', inplace=True)
-    data = data.resample('H').asfreq()
-    data['close_price'] = data['close_price'].fillna(method='ffill') # carry over values from last hour 
-    data['volume'] = data['volume'].fillna(0) # fill missing values with 0 because there have been no trades 
-    data['count'] = data['count'].fillna(0)
-    #data.sort_values('bucket', inplace=True)
+    if fill: 
+        data = data.resample('H').asfreq()
+        data['close_price'] = data['close_price'].fillna(method='ffill') # carry over values from last hour 
+        data['volume'] = data['volume'].fillna(0) # fill missing values with 0 because there have been no trades 
+        data['count'] = data['count'].fillna(0)
+    data.sort_values('bucket', inplace=True)
     data.reset_index(inplace=True)
     return data
 
 def apply_log_scaler(data, columns=['close_price', 'volume', 'close_lag12', 'close_lag168']): 
     for column in columns:
         data[column] = np.log1p(data[column])
+    return data
+
+def simple_moving_average(data, window_sizes, columns=['close_price']): 
+    for column in columns: 
+        for window_size in window_sizes: 
+            data['sma_'+str(window_size)+"_"+column] = data[column].rolling(window=window_size).mean()
+    return data
+
+def exponential_moving_average(data, span_sizes, columns=['close_price']):
+    for column in columns: 
+        for span in span_sizes: 
+            data['ema_'+str(span)+"_"+column] = data[column].ewm(span=span).mean()
     return data
