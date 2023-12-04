@@ -1,0 +1,11 @@
+python-dotenv
+pandas
+#numpy
+#holidays # for holiday features
+requests
+#datetime
+boto3 
+
+#scikit-learn==1.1.3
+#keras==2.14.0
+

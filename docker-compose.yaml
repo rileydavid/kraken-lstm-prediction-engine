@@ -11,7 +11,7 @@ services:
     image: timescale/timescaledb-ha:pg15-latest
     container_name: timescaledb
     ports:
-      - "5432:${PG_PORT}"
+      - "${PG_PORT}:${PG_PORT}"
     networks:
       network:
         ipv4_address: 172.1.0.10
@@ -104,7 +104,7 @@ services:
     container_name: backend
     restart: always
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT}:8000"
     volumes:
       - ./data/import/:/import/
     networks:

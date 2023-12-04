@@ -140,7 +140,7 @@ WITH (timescaledb.continuous) AS
 GROUP BY bucket, symbol_id;
 
 SELECT add_continuous_aggregate_policy('kraken_ohlc_hour',
-    start_offset => INTERVAL '3 hour',
+    start_offset => INTERVAL '3 hour', 
     end_offset => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour');
 
@@ -165,7 +165,7 @@ DECLARE
 symbol_id_result INTEGER;
 interval_duration INTERVAL; 
 BEGIN
-    interval_duration := input_interval * INTERVAL '1 day';
+    interval_duration := input_interval * INTERVAL '1 hour';
     
     IF input_symbol = 'all' THEN
         RETURN QUERY SELECT 
