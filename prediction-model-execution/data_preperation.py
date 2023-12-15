@@ -9,13 +9,18 @@ class DataPreparation:
         self.data = data
 
     # Data Preperation as input for model training/prediction 
-    def create_sequences_np(self, features, lookback, datatype=np.float16):
+    def create_sequences_np(self, features, lookback, datatype=np.float32):
         data_array = self.data[features].to_numpy()
         X, y = [], []
         for i in range(lookback, len(data_array)):
             X.append(data_array[i-lookback:i])
             y.append(data_array[i, self.data.columns.get_loc('close_price')])
         return np.array(X).astype(datatype), np.array(y).astype(datatype)
+    
+    def create_prediction_sequence_np(self, features, lookback, datatype=np.float32):
+        data_array = self.data[features].to_numpy()
+        last_sequence = data_array[-lookback:]
+        return np.array(last_sequence).astype(datatype)
 
     # Feature Engineering
     def convert_timestamp(self): 
@@ -120,13 +125,13 @@ class DataPreparation:
             for span in span_sizes: 
                 self.data['ema_'+str(span)+"_"+column] = self.data[column].ewm(span=span).mean()
 
-    def convert_to_numeric(self, columns=["close_price, count, volume"]): 
+    def convert_to_numeric(self, columns=["close_price", "count", "volume"]): 
         for column in columns: 
             self.data[column] = pd.to_numeric(self.data[column])
 
     def data_prep(self):
         # data prep
-        self.data.drop(columns=['open_price', 'high', 'low', 'symbol'], axis=1)
+        self.data.drop(columns=['symbol'], axis=1)
         self.process_timestamp(fill=True)
         self.convert_to_numeric()
         self.add_feature_date()

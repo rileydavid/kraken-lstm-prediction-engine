@@ -6,9 +6,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct OhlcDto {
     bucket: DateTime<Utc>,
-    open_price: BigDecimal,
-    high: BigDecimal,
-    low: BigDecimal,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    open_price: Option<BigDecimal>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    high: Option<BigDecimal>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    low: Option<BigDecimal>,
     close_price: BigDecimal,
     volume: BigDecimal,
     count: i32,
@@ -18,9 +21,9 @@ pub struct OhlcDto {
 impl OhlcDto {
     pub fn new(
         bucket: DateTime<Utc>,
-        open_price: BigDecimal,
-        high: BigDecimal,
-        low: BigDecimal,
+        open_price: Option<BigDecimal>,
+        high: Option<BigDecimal>,
+        low: Option<BigDecimal>,
         close_price: BigDecimal,
         volume: BigDecimal,
         count: i32,

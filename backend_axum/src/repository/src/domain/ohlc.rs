@@ -8,9 +8,9 @@ use sqlx::Row;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OhlcModel {
     bucket: DateTime<Utc>,
-    open_price: BigDecimal,
-    high: BigDecimal,
-    low: BigDecimal,
+    open_price: Option<BigDecimal>,
+    high: Option<BigDecimal>,
+    low: Option<BigDecimal>,
     close_price: BigDecimal,
     volume: BigDecimal,
     count: i32,
@@ -20,9 +20,9 @@ pub struct OhlcModel {
 impl OhlcModel {
     pub fn new(
         bucket: DateTime<Utc>,
-        open_price: BigDecimal,
-        high: BigDecimal,
-        low: BigDecimal,
+        open_price: Option<BigDecimal>,
+        high: Option<BigDecimal>,
+        low: Option<BigDecimal>,
         close_price: BigDecimal,
         volume: BigDecimal,
         count: i32,
@@ -45,13 +45,13 @@ impl OhlcModel {
     pub fn get_bucket(&self) -> &DateTime<Utc> {
         &self.bucket
     }
-    pub fn get_open_price(&self) -> &BigDecimal {
+    pub fn get_open_price(&self) -> &Option<BigDecimal> {
         &self.open_price
     }
-    pub fn get_high(&self) -> &BigDecimal {
+    pub fn get_high(&self) -> &Option<BigDecimal> {
         &self.high
     }
-    pub fn get_low(&self) -> &BigDecimal {
+    pub fn get_low(&self) -> &Option<BigDecimal> {
         &self.low
     }
     pub fn get_close_price(&self) -> &BigDecimal {
@@ -100,9 +100,9 @@ impl From<PgRow> for OhlcModel {
     fn from(value: PgRow) -> Self {
         OhlcModel::new(
             value.get("bucket"),
-            value.get("open_price"),
-            value.get("high"),
-            value.get("low"),
+            value.try_get("open_price").ok(),
+            value.try_get("high").ok(),
+            value.try_get("low").ok(),
             value.get("close_price"),
             value.get("volume"),
             value.get("count"),
