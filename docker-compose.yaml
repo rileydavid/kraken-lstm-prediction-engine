@@ -111,6 +111,17 @@ services:
       network:
         ipv4_address: 172.1.0.14
 
+  modelservice: 
+    build: ./prediction-model-execution
+    container_name: modelservice
+    restart: always
+    ports:
+      - "7000:7000"
+    networks:
+      network:
+        ipv4_address: 172.1.0.15
+
+
   #frontend: 
   #  build: ./frontend-angular
   #  container_name: frontend-angular

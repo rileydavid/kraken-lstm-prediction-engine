@@ -5,11 +5,14 @@ from calendar import monthrange
 from sklearn.preprocessing import StandardScaler
 
 class DataPreparation:
-    def __init__(self, data):
+    def __init__(self, data, config):
         self.data = data
-
-    # Data Preperation as input for model training/prediction 
-    def create_sequences_np(self, features, lookback, datatype=np.float32):
+        self.add_features(config)
+        self.prediction_sequence = self.get_prediction_sequence(features=config["features"],
+                                                                lookback=config['lookback'],
+                                                                datatype=eval(config['data_type']))
+    # Data Preperation as input for model training 
+    def create_sequences(self, features, lookback, datatype=np.float32):
         data_array = self.data[features].to_numpy()
         X, y = [], []
         for i in range(lookback, len(data_array)):
@@ -17,7 +20,7 @@ class DataPreparation:
             y.append(data_array[i, self.data.columns.get_loc('close_price')])
         return np.array(X).astype(datatype), np.array(y).astype(datatype)
     
-    def create_prediction_sequence_np(self, features, lookback, datatype=np.float32):
+    def get_prediction_sequence(self, features, lookback, datatype):
         data_array = self.data[features].to_numpy()
         last_sequence = data_array[-lookback:]
         return np.array(last_sequence).astype(datatype)
@@ -31,7 +34,7 @@ class DataPreparation:
         scaler = StandardScaler()
         self.data[['open_price', 'high', 'low', 'close_price', 'volume']] = scaler.fit_transform(self.data[['open_price', 'high', 'low', 'close_price', 'volume']])
 
-    def add_feature_date(self):
+    def add_feature_date(self, weekend=True):
         # time-based features
         self.data['hour'] = self.data['bucket'].dt.hour
         self.data['day_of_week'] = self.data['bucket'].dt.dayofweek  # Monday=0, Sunday=6
@@ -39,7 +42,8 @@ class DataPreparation:
         self.data['month'] = self.data['bucket'].dt.month
         self.data['year'] = self.data['bucket'].dt.year
         # binary feature for weekend
-        self.data['is_weekend'] = self.data['day_of_week'].apply(lambda x: 1 if x > 4 else 0)
+        if weekend: 
+            self.data['is_weekend'] = self.data['day_of_week'].apply(lambda x: 1 if x > 4 else 0)
 
     def add_holiday_feature(self):
         us_holidays = holidays.UnitedStates()
@@ -48,7 +52,7 @@ class DataPreparation:
     def add_feature_high_low_range(self):
         self.data['hl_range'] = self.data['high'] - self.data['low']
 
-    def add_feature_lag(self, lags=[1]): 
+    def add_feature_lag(self, lags=[]): 
         for lag in lags: 
             self.data['close_lag'+str(lag)] = self.data['close_price'].shift(lag)
         #data = data.dropna() ## drop first few rows that are now NaN
@@ -74,7 +78,7 @@ class DataPreparation:
     def apply_cyclic_encoding(self, columms=['hour', 'day_of_week', 'month']): 
         for column in columms: 
             cycle_length = self.get_distinct_count(column) 
-            print(cycle_length)
+
             self.data[column + "_cos"] = self.data[column].apply(lambda x: DataPreparation.encode_cyclic_feature(x, cycle_length, encoding_type='cos')).astype(float)
             self.data[column + "_sin"] = self.data[column].apply(lambda x: DataPreparation.encode_cyclic_feature(x, cycle_length, encoding_type='sin')).astype(float)
 
@@ -104,7 +108,7 @@ class DataPreparation:
         self.data.set_index('bucket', inplace=True)
         if fill: 
             self.data = self.data.resample('H').asfreq()
-            self.data['close_price'] = self.data['close_price'].fillna(method='ffill') # carry over values from last hour 
+            self.data['close_price'] = self.data['close_price'].ffill() # carry over values from last hour 
             self.data['volume'] = self.data['volume'].fillna(0) # fill missing values with 0 because there have been no trades 
             self.data['count'] = self.data['count'].fillna(0)
         self.data.sort_values('bucket', inplace=True)
@@ -129,17 +133,43 @@ class DataPreparation:
         for column in columns: 
             self.data[column] = pd.to_numeric(self.data[column])
 
-    def data_prep(self):
-        # data prep
+    # not in use 
+    #def data_prep(self):
+    #    # data prep
+    #    self.data.drop(columns=['symbol'], axis=1)
+    #    self.process_timestamp(fill=True)
+    #    self.convert_to_numeric()
+    #    self.add_feature_date()
+    #    self.add_holiday_feature()
+    #    self.apply_cyclic_encoding(columms=['hour', 'day_of_week', 'month'])
+    #    self.apply_day_of_month_encoding()
+    #    self.normalize_year() # has to be updated yearly (because of the min-max scaler - max+1 is currently set = 2024)
+    #    self.apply_log_scaler(columns=['close_price', 'volume', 'count'])
+    #    
+    #    self.add_feature_lag(lags=[12,168])
+    #    #data = simple_moving_average(data, window_sizes=[6,12,168], columns=['close_price']) # window sizes are in hours
+    #    self.exponential_moving_average(span_sizes=[6,12], columns=['close_price']) # span sizes are in hours
+
+    def add_features(self, config): 
+        # not configurable
         self.data.drop(columns=['symbol'], axis=1)
         self.process_timestamp(fill=True)
-        self.convert_to_numeric()
-        self.add_feature_date()
-        self.add_holiday_feature()
+        self.convert_to_numeric() # converts "close_price", "count", "volume"
+        self.add_feature_date(weekend=("is_weekend" in config['features']))
+        
+        if "is_holiday" in config['features']: 
+            self.add_holiday_feature()
+
+        # not configurable
         self.apply_cyclic_encoding(columms=['hour', 'day_of_week', 'month'])
         self.apply_day_of_month_encoding()
-        self.normalize_year() # has to be updated yearly (because of the min-max scaler - max+1 is currently set = 2024)
+
+        if "year_normalized" in config['features']: 
+            self.normalize_year()
+
         self.apply_log_scaler(columns=['close_price', 'volume', 'count'])
-        self.add_feature_lag(lags=[12,168])
-        #data = simple_moving_average(data, window_sizes=[6,12,168], columns=['close_price']) # window sizes are in hours
-        self.exponential_moving_average(span_sizes=[6,12], columns=['close_price']) # span sizes are in hours
+
+        self.add_feature_lag(lags=config['lags'])
+        self.simple_moving_average(window_sizes=config['window_sizes'], columns=['close_price']) # window sizes are in hours
+        self.exponential_moving_average(span_sizes=config['span_sizes'], columns=['close_price']) # span sizes are in hours
+

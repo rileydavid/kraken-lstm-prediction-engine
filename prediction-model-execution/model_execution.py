@@ -1,73 +1,56 @@
-# Python Script for Model Execution
 import os
+import numpy as np
+import cloudpickle
+from dateutil import parser
+from datetime import timedelta, datetime
 from dotenv import load_dotenv
+# Make sure to import your custom modules
 from data_preperation import * 
 from data_service import * 
-from model_service import *
-from keras.models import load_model
-import cloudpickle
+from model_provider import *
 
-print("Starting!")
+class ModelExecution:
+    def __init__(self, config):
+        print("Initializing Model Execution")
+        load_dotenv()
+        self.config = config
 
-load_dotenv()
+        self.model_provider = ModelProvider(os.getenv('S3_BUCKET'),
+                                           os.getenv('MODEL_NAME'),
+                                           os.getenv('AWS_ACCESS_KEY_ID'),
+                                           os.getenv('AWS_SECRET_ACCESS_KEY'),
+                                           os.getenv('S3_ENDPOINT_URL'))
 
-print("dotenv")
+        self.data_service = DataService(os.getenv('BACKEND_ENDPOINT'))
 
-print(os.getenv('S3_BUCKET'))
-print(os.getenv('MODEL_NAME'))
-print(os.getenv('AWS_ACCESS_KEY_ID'))
-print(os.getenv('AWS_SECRET_ACCESS_KEY'))
-print(os.getenv('S3_ENDPOINT_URL'))
+    def execute(self):
+        print("Starting execution")
 
-model_service = ModelService(os.getenv('S3_BUCKET'),
-                            os.getenv('MODEL_NAME'),
-                            os.getenv('AWS_ACCESS_KEY_ID'),
-                            os.getenv('AWS_SECRET_ACCESS_KEY'),
-                            os.getenv('S3_ENDPOINT_URL'))
+        # determine the size of the dataset (hours back)
+        max_hours = np.max(self.config['lags'] + self.config['span_sizes']
+                            + self.config['window_sizes'])
 
-#model_service.fetch_model('model.pkl')
+        df = self.data_service.get_ohlc_hour_start_date(self.config['symbol_id'],
+                                                         int(self.config['lookback']) + max_hours,
+                                                          self.config['start_date'])
+        
+        # start date --> + 1 hour will be predicted
+        df.reset_index(inplace=True)
 
-data_service = DataService(os.getenv('BACKEND_ENDPOINT'))
+        data_preperation_service = DataPreparation(df, self.config)
 
-# todo use some kind of config for these values so they can easily be switched
-lookback = 16 
-max_close_lag = 168
+        X = data_preperation_service.prediction_sequence
+        X_reshaped = X.reshape(1, int(self.config['lookback']), len(self.config['features']))
 
-df = data_service.get_ohlc_hour_start_date("ETHUSD", lookback+max_close_lag, "2023-09-01 00:00:00+00:00")
+        self.model_provider.fetch_model(self.config['modelname'])
+        with open(self.config['modelname'], 'rb') as file:
+            model = cloudpickle.load(file)
 
-print(df.dtypes)
-print(df.head())
-df.reset_index(inplace=True)
-print(df.columns)
-
-print(len(df))
-
-data_preperation_service = DataPreparation(df)
-
-# flaw in this is missing data points --> for example there is no bucket for the exact start date!
-# this can be detected 
-data_preperation_service.data_prep()
-
-features = ['is_holiday', 'close_price', 'volume', 'is_weekend', 'count', 'hour_cos', 'hour_sin', 'day_of_week_cos', 'day_of_week_sin', 'month_cos', 'month_sin', 'day_of_month_sin', 'day_of_month_cos', 'year_normalized', 'close_lag12', 'close_lag168', 'ema_6_close_price', 'ema_12_close_price']
-
-# X hold the sequence that is feed to the prediction model 
-X = data_preperation_service.create_prediction_sequence_np(features=features, lookback=lookback)
-
-print(X)
-print(X.shape)
-
-X_reshaped = X.reshape(1, 16, 18)
-
-model_service.fetch_model("model.pkl")
-
-with open('model.pkl', 'rb') as file:
-    model = cloudpickle.load(file)
-
-predicted_price_log = model.predict(X_reshaped)
-
-# this seems to be correct
-print(predicted_price_log)
-print(np.expm1(predicted_price_log)[0, 0]) 
-
-# where should those predicted values be saved? 
-# kraken_prediction? 
+        predicted_price_log = model.predict(X_reshaped, verbose=0)
+        predicted_price = np.expm1(predicted_price_log)[0, 0]
+        
+        parsed_date = datetime.strptime(self.config['start_date'], '%Y-%m-%dT%H:%M:%S%z')
+        new_date = parsed_date + timedelta(hours=1)
+        output_date = new_date.strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
+        
+        return output_date, predicted_price

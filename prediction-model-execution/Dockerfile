@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir model
 
 # launch model execution 
-CMD ["python", "-u", "model_execution.py"]
+CMD ["python", "-u", "server.py"]
 
 # docker build -t model_execution .
 # docker run  model_execution

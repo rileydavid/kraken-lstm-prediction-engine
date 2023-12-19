@@ -1,4 +1,4 @@
 //mod middlewares;
-mod routes;
+pub mod routes;
 mod utils;
 pub mod webserver;

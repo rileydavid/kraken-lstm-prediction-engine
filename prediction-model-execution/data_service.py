@@ -12,18 +12,21 @@ class DataService:
 
     def get_ohlc_hour_start_date(self, symbol, interval, start_date):
         url = f"{self.base_url_ohlc_hour}/start"
+
         data = {
-            "symbol": symbol,
-            "interval": interval,
+            "symbol_id": symbol,
+            "interval": interval.item(),
             "start_date": start_date
         }
+
+        print(data)
         return self.fetch_data_post(url, data)
     
     def get_ohlc_day_start_date(self, symbol, interval, start_date):
         url = f"{self.base_url_ohlc_day}/start"
         data = {
-            "symbol": symbol,
-            "interval": interval,
+            "symbol_id": symbol,
+            "interval": interval.item(),
             "start_date": start_date
         }
         return self.fetch_data_post(url, data)
@@ -33,7 +36,6 @@ class DataService:
         return self.fetch_data_get(url)
 
     def fetch_data_post(self, url, data):
-        print("url " + url)
         response = requests.post(url, json=data)
 
         if response.status_code == 200:
@@ -45,7 +47,6 @@ class DataService:
             print("Failed to fetch data: Status code", response.status_code)
 
     def fetch_data_get(self, url):
-        print("url " + url)
         response = requests.get(url)
 
         if response.status_code == 200:

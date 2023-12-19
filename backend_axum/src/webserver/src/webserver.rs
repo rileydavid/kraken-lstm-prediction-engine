@@ -11,6 +11,7 @@ pub async fn run() {
         .merge(routes::ohlc::routes::router().await)
         .merge(routes::symbol::routes::router().await)
         .merge(routes::import::routes::router().await)
+        .merge(routes::modelexecution::routes::router().await)
         .merge(routes::trade::routes::router().await);
 
     let adress = SocketAddr::from(get_address().await);

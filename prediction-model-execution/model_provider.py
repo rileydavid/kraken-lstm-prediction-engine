@@ -1,7 +1,7 @@
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 
-class ModelService:
+class ModelProvider:
     def __init__(self, bucket_name, model_name, access_key, secret_key, endpoint_url):
         self.bucket_name = bucket_name
         self.model_name = model_name
