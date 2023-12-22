@@ -1,9 +1,7 @@
 use bigdecimal::BigDecimal;
 use chrono::{Utc, DateTime, TimeZone};
-use repository::domain::{ohlc::OhlcModel, symbol};
+use repository::domain::ohlc::OhlcModel;
 use bigdecimal::{ToPrimitive, FromPrimitive};
-
-use crate::ohlc::ohlc_dto::OhlcDto;
 
 #[derive(Clone, Copy)]
 pub enum OhlcLabel {
@@ -118,38 +116,6 @@ impl From<OhlcModel> for OhlcCacheDto {
     }
 }
 
-impl From<OhlcCacheDto> for OhlcDto {
-    fn from(cache: OhlcCacheDto) -> Self {
-        let mut open_price = None;
-        let mut high = None;
-        let mut low = None;
-        let mut close_price = BigDecimal::from(0);
-        let mut volume = BigDecimal::from(0);
-        let mut count = 0;
-
-        for key_dto in cache.get_keys() {
-            match key_dto.get_label() {
-                OhlcLabel::OpenPrice => open_price = FromPrimitive::from_f64(*key_dto.get_value()),
-                OhlcLabel::High => high = FromPrimitive::from_f64(*key_dto.get_value()),
-                OhlcLabel::Low => low = FromPrimitive::from_f64(*key_dto.get_value()),
-                OhlcLabel::ClosePrice => close_price = FromPrimitive::from_f64(*key_dto.get_value()).unwrap(),
-                OhlcLabel::Volume => volume = FromPrimitive::from_f64(*key_dto.get_value()).unwrap(),
-                OhlcLabel::Count => count = *key_dto.get_value() as i32,
-            }
-        }
-
-        OhlcDto::new(
-            timestamp_to_datetime(cache.get_timestamp().to_owned()),
-            open_price,
-            high,
-            low,
-            close_price,
-            volume,
-            count,
-            cache.get_symbol_id().to_owned(),
-        )
-    }
-}
 
 
 

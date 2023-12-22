@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 utils = { path = "../utils" }
 repository = { path = "../repository" }
+cache = { path = "../cache" }
 
 serde = "1.0.152"
 bigdecimal = {version = "0.3.1", features = ["serde"]} # sqlx compatible

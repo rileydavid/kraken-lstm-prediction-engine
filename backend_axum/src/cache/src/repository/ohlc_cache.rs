@@ -1,9 +1,10 @@
 use core::time;
-use std::{cell::OnceCell, collections::HashMap, future::IntoFuture, sync::Arc, time::SystemTime};
+use std::{collections::HashMap, sync::Arc, time::SystemTime};
 
 use bigdecimal::{FromPrimitive, BigDecimal};
 use chrono::{DateTime, Timelike, Utc, TimeZone, Date};
-use redis::acl;
+
+
 use repository::domain::{ohlc::{self, OhlcModel}, symbol};
 use rustis::{
     client::Client,
@@ -14,7 +15,7 @@ use rustis::{
     },
     resp::CollectionResponse,
 };
-use tracing::{error, info};
+
 use utils::{
     core::cache,
     error::{
@@ -23,9 +24,10 @@ use utils::{
     },
 };
 
-use crate::ohlc::ohlc_dto::OhlcDto;
+use tracing::error;
+use tracing::info;
 
-use super::cache_dto::{OhlcCacheDto, OhlcKeyDto, self};
+use crate::domain::ohlc::{OhlcCacheDto, OhlcKeyDto, timestamp_to_datetime};
 
 // Maybe move all this to it's own module --> similar to repository
 
@@ -176,7 +178,7 @@ async fn insert_ohlc_key(
     }
 }
 
-pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime<Utc>, end_date: DateTime<Utc>, interval: i32) -> Result<Vec<OhlcDto>, GenericError> {
+pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime<Utc>, end_date: DateTime<Utc>, interval: i32) -> Result<Vec<OhlcModel>, GenericError> {
 
     let mut master_map: HashMap<String, HashMap<u64, f64>> = HashMap::new();
 
@@ -197,7 +199,7 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
         }
     }
 
-    let mut result: Vec<OhlcDto> = Vec::new();
+    let mut result: Vec<OhlcModel> = Vec::new();
 
     if let Some(close_price_map) = master_map.get(CLOSE_PRICE) {
         for (key, value) in close_price_map {
@@ -229,9 +231,9 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
                 .and_then(|m| m.get(key))
                 .map(|&v| v as i32);
 
-            let time = cache_dto::timestamp_to_datetime(*key as i64);
+            let time = timestamp_to_datetime(*key as i64);
 
-            let ohlc_dto = OhlcDto::new(
+            let ohlc_dto = OhlcModel::new(
                 time,
                 open_price,
                 high,

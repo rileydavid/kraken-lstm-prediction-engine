@@ -1,0 +1,18 @@
+[package]
+name = "cache"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# internal
+utils = { path = "../utils" }
+repository = { path = "../repository" }
+#service = { path = "../service" }
+
+# external
+chrono = { version = "0.4.23", features = ["serde"]}
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.15", features = ["env-filter"]}
+bigdecimal = {version = "0.3.1", features = ["serde"]} # this version is compatibles with sqlx bigdecimal
+redis = "0.24.0"
+rustis = {version = "0.12.4", features = ["redis-stack", "pool"]} 
