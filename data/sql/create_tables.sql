@@ -111,7 +111,8 @@ BEGIN
         ORDER BY kraken_trade.time; 
     ELSE 
         SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
-        LIMIT 100;
+        
+        SELECT
             kraken_trade.time,
             kraken_trade.price,
             kraken_trade.volume,
