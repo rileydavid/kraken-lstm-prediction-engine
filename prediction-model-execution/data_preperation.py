@@ -133,26 +133,9 @@ class DataPreparation:
         for column in columns: 
             self.data[column] = pd.to_numeric(self.data[column])
 
-    # not in use 
-    #def data_prep(self):
-    #    # data prep
-    #    self.data.drop(columns=['symbol'], axis=1)
-    #    self.process_timestamp(fill=True)
-    #    self.convert_to_numeric()
-    #    self.add_feature_date()
-    #    self.add_holiday_feature()
-    #    self.apply_cyclic_encoding(columms=['hour', 'day_of_week', 'month'])
-    #    self.apply_day_of_month_encoding()
-    #    self.normalize_year() # has to be updated yearly (because of the min-max scaler - max+1 is currently set = 2024)
-    #    self.apply_log_scaler(columns=['close_price', 'volume', 'count'])
-    #    
-    #    self.add_feature_lag(lags=[12,168])
-    #    #data = simple_moving_average(data, window_sizes=[6,12,168], columns=['close_price']) # window sizes are in hours
-    #    self.exponential_moving_average(span_sizes=[6,12], columns=['close_price']) # span sizes are in hours
-
     def add_features(self, config): 
         # not configurable
-        self.data.drop(columns=['symbol'], axis=1)
+        self.data.drop(columns=['symbol_id'], axis=1)
         self.process_timestamp(fill=True)
         self.convert_to_numeric() # converts "close_price", "count", "volume"
         self.add_feature_date(weekend=("is_weekend" in config['features']))

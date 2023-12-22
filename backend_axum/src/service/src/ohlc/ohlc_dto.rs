@@ -15,7 +15,7 @@ pub struct OhlcDto {
     close_price: BigDecimal,
     volume: BigDecimal,
     count: i32,
-    symbol: String,
+    symbol_id: i32,
 }
 
 impl OhlcDto {
@@ -27,7 +27,7 @@ impl OhlcDto {
         close_price: BigDecimal,
         volume: BigDecimal,
         count: i32,
-        symbol: String,
+        symbol_id: i32,
     ) -> Self {
         OhlcDto {
             bucket,
@@ -37,10 +37,11 @@ impl OhlcDto {
             close_price,
             volume,
             count,
-            symbol,
+            symbol_id,
         }
     }
 }
+
 
 impl From<OhlcModel> for OhlcDto {
     fn from(value: OhlcModel) -> Self {
@@ -52,7 +53,7 @@ impl From<OhlcModel> for OhlcDto {
             value.get_close_price().to_owned(),
             value.get_volume().to_owned(),
             value.get_count().to_owned(),
-            value.get_symbol().to_owned()
+            value.get_symbol_id().to_owned()
         )
     }
 }
@@ -67,7 +68,7 @@ impl From<OhlcDto> for OhlcModel {
             value.close_price,
             value.volume,
             value.count,
-            value.symbol,
+            value.symbol_id,
         )
     }
 }

@@ -121,6 +121,16 @@ services:
       network:
         ipv4_address: 172.1.0.15
 
+  redis:
+    image: redis/redis-stack-server:latest  
+    ports:
+      - "6379:6379"  
+    volumes:
+      - ./data/redis/:/data  
+    networks:
+      network:
+        ipv4_address: 172.1.0.16
+
 
   #frontend: 
   #  build: ./frontend-angular

@@ -3,6 +3,7 @@ use dotenv::dotenv;
 use tracing::info;
 use utils::core::logger;
 use webserver;
+use utils::core::cache;
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
@@ -12,7 +13,7 @@ async fn main() -> Result<(), ()> {
 
     // test cache connection
     //cache::get_connection().await.expect("Failed to create cache connection");
-
+    
     collector::collector::run().await;
     webserver::webserver::run().await;
     Ok(())

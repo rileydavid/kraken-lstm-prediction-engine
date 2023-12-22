@@ -16,7 +16,7 @@ pub async fn get_ohlc_hour_symbol_interval(
     symbol_id: i32,
     interval: i32,
 ) -> Result<Vec<OhlcModel>, GenericError> {
-    // let connection = get_connection().await;
+
     match sqlx::query(QUERY_SELECT_GET_OHLC_HOUR_BY_SYMBOL_INTERVAL)
         .bind(interval)
         .bind(symbol_id)
@@ -34,7 +34,7 @@ pub async fn get_ohlc_day_symbol_interval(
     symbol_id: i32,
     interval: i32,
 ) -> Result<Vec<OhlcModel>, GenericError> {
-    // let connection = get_connection().await;
+
     match sqlx::query(QUERY_SELECT_GET_OHLC_DAY_BY_SYMBOL_INTERVAL)
         .bind(interval)
         .bind(symbol_id)
@@ -53,7 +53,7 @@ pub async fn get_ohlc_hour_start_date(
     interval: i32,
     start_date: DateTime<Utc>
 ) -> Result<Vec<OhlcModel>, GenericError> {
-    // let connection = get_connection().await;
+
     match sqlx::query(QUERY_SELECT_GET_OHLC_HOUR_BY_START_DATE)
         .bind(interval)
         .bind(start_date)
@@ -73,7 +73,7 @@ pub async fn get_ohlc_day_start_date(
     interval: i32,
     start_date: DateTime<Utc>
 ) -> Result<Vec<OhlcModel>, GenericError> {
-    // let connection = get_connection().await;
+
     match sqlx::query(QUERY_SELECT_GET_OHLC_DAY_BY_START_DATE)
         .bind(interval)
         .bind(start_date)

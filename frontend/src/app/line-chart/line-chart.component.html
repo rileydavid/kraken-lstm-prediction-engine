@@ -1,0 +1,8 @@
+<p>line-chart works!</p>
+<div *ngIf="isLoading" class="loading-indicator">
+    Loading data...
+</div>
+<div *ngIf="!isLoading">
+    <div #chart></div>
+</div>
+<div *ngIf="!isLoading"><p>isLoading is done</p></div>

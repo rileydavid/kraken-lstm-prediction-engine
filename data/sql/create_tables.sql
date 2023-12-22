@@ -53,6 +53,8 @@ BEGIN
 END;
 $$;
 
+-- This seems inefficient --> might be better to keep a table of all symbols and their ids
+-- in the backend
 CREATE OR REPLACE PROCEDURE insert_trade (
     _time TIMESTAMPTZ,
     _price NUMERIC,  
@@ -139,72 +141,52 @@ WITH (timescaledb.continuous) AS
         SUM(volume) AS volume,
         CAST(COUNT(*) AS INTEGER) AS count -- this could lead to an overflow if more than 2,147,483,647 trades occur in one hour highest value was 25k
     FROM kraken_trade
-GROUP BY bucket, symbol_id;
+GROUP BY bucket, symbol_id; -- do i need the bucket here? TODO Test this? might improve performance
 
 SELECT add_continuous_aggregate_policy('kraken_ohlc_hour',
     start_offset => INTERVAL '3 hour', 
     end_offset => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour');
 
-
--- CREATE OR REPLACE FUNCTION get_ohlc_hour (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_symbol TEXT 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     open_price NUMERIC,
---     high NUMERIC,
---     low NUMERIC,
---     close_price NUMERIC,
---     volume NUMERIC,
---     count INTEGER,
---     symbol TEXT
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- symbol_id_result INTEGER;
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 hour';
---     
---     IF input_symbol = 'all' THEN
---         RETURN QUERY SELECT 
---             kraken_ohlc_hour.bucket,
---             kraken_ohlc_hour.open_price,
---             kraken_ohlc_hour.high,
---             kraken_ohlc_hour.low,
---             kraken_ohlc_hour.close_price,
---             kraken_ohlc_hour.volume,
---             kraken_ohlc_hour.count,
---             _symbol.symbol AS symbol
---         FROM kraken_ohlc_hour
---         JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
---         WHERE kraken_ohlc_hour.bucket >= NOW() - interval_duration
---         ORDER BY kraken_ohlc_hour.bucket;
--- 
---     ELSE
---         SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
--- 	
---         RETURN QUERY SELECT 
---             kraken_ohlc_hour.bucket,
---             kraken_ohlc_hour.open_price,
---             kraken_ohlc_hour.high,
---             kraken_ohlc_hour.low,
---             kraken_ohlc_hour.close_price,
---             kraken_ohlc_hour.volume,
---             kraken_ohlc_hour.count,
---             _symbol.symbol AS symbol
---         FROM kraken_ohlc_hour
---         JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
---         WHERE kraken_ohlc_hour.symbol_id = symbol_id_result 
---         AND kraken_ohlc_hour.bucket >= NOW() - interval_duration
---         ORDER BY kraken_ohlc_hour.bucket; 
---     END IF;
--- END;$$;
-
 -- using symbol_id
+--CREATE OR REPLACE FUNCTION get_ohlc_hour (
+--    input_interval INTEGER, -- in days / all for all symbols
+--    input_symbol_id INTEGER 
+--)
+--RETURNS TABLE (
+--    bucket TIMESTAMPTZ,
+--    open_price NUMERIC,
+--    high NUMERIC,
+--    low NUMERIC,
+--    close_price NUMERIC,
+--    volume NUMERIC,
+--    count INTEGER,
+--    symbol TEXT
+--)
+--LANGUAGE plpgsql    
+--AS $$
+--DECLARE 
+--interval_duration INTERVAL; 
+--BEGIN
+--    interval_duration := input_interval * INTERVAL '1 hour';
+--    
+--    RETURN QUERY SELECT 
+--        kraken_ohlc_hour.bucket,
+--        kraken_ohlc_hour.open_price,
+--        kraken_ohlc_hour.high,
+--        kraken_ohlc_hour.low,
+--        kraken_ohlc_hour.close_price,
+--        kraken_ohlc_hour.volume,
+--        kraken_ohlc_hour.count,
+--        _symbol.symbol AS symbol
+--    FROM kraken_ohlc_hour
+--    JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = input_symbol_id
+--    WHERE kraken_ohlc_hour.symbol_id = input_symbol_id
+--    AND kraken_ohlc_hour.bucket >= NOW() - interval_duration
+--    ORDER BY kraken_ohlc_hour.bucket; 
+--END;$$;
+
+
 CREATE OR REPLACE FUNCTION get_ohlc_hour (
     input_interval INTEGER, -- in days / all for all symbols
     input_symbol_id INTEGER 
@@ -217,7 +199,7 @@ RETURNS TABLE (
     close_price NUMERIC,
     volume NUMERIC,
     count INTEGER,
-    symbol TEXT
+    symbol_id INTEGER
 )
 LANGUAGE plpgsql    
 AS $$
@@ -234,68 +216,12 @@ BEGIN
         kraken_ohlc_hour.close_price,
         kraken_ohlc_hour.volume,
         kraken_ohlc_hour.count,
-        _symbol.symbol AS symbol
+        kraken_ohlc_hour.symbol_id
     FROM kraken_ohlc_hour
-    JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = input_symbol_id
     WHERE kraken_ohlc_hour.symbol_id = input_symbol_id
     AND kraken_ohlc_hour.bucket >= NOW() - interval_duration
     ORDER BY kraken_ohlc_hour.bucket; 
 END;$$;
-
-
-
--- get ohlc using start date 
--- CREATE OR REPLACE FUNCTION get_ohlc_hour_start_date (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_start_date TIMESTAMPTZ,
---     input_symbol TEXT 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     close_price NUMERIC,
---     volume NUMERIC,
---     count INTEGER, 
---     symbol TEXT
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- symbol_id_result INTEGER;
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 hour';
---     
---     IF input_symbol = 'all' THEN
---         RETURN QUERY SELECT 
---             kraken_ohlc_hour.bucket,
---             kraken_ohlc_hour.close_price,
---             kraken_ohlc_hour.volume,
---             kraken_ohlc_hour.count,
---             _symbol.symbol AS symbol
---         FROM kraken_ohlc_hour
---         JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
---         WHERE kraken_ohlc_hour.bucket >= input_start_date - interval_duration 
---         AND input_start_date >= kraken_ohlc_hour.bucket 
---         ORDER BY kraken_ohlc_hour.bucket;
--- 
---     ELSE
---         SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
--- 	
---         RETURN QUERY SELECT 
---             kraken_ohlc_hour.bucket,
---             kraken_ohlc_hour.close_price,
---             kraken_ohlc_hour.volume,
---             kraken_ohlc_hour.count,
---             _symbol.symbol AS symbol
---         FROM kraken_ohlc_hour
---         JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = _symbol.id 
---         WHERE kraken_ohlc_hour.symbol_id = symbol_id_result 
---         AND kraken_ohlc_hour.bucket >= input_start_date - interval_duration 
---         AND input_start_date >= kraken_ohlc_hour.bucket 
---         ORDER BY kraken_ohlc_hour.bucket; 
---     END IF;
--- END;$$;
--- Example Query: SELECT * FROM get_ohlc_hour (15, 'ETHUSD');
 
 -- using id instead of text for symbol
 CREATE OR REPLACE FUNCTION get_ohlc_hour_start_date (
@@ -308,7 +234,7 @@ RETURNS TABLE (
     close_price NUMERIC,
     volume NUMERIC,
     count INTEGER, 
-    symbol TEXT
+    symbol_id INTEGER
 )
 LANGUAGE plpgsql    
 AS $$
@@ -322,9 +248,8 @@ BEGIN
         kraken_ohlc_hour.close_price,
         kraken_ohlc_hour.volume,
         kraken_ohlc_hour.count,
-        _symbol.symbol AS symbol
+        kraken_ohlc_hour.symbol_id
     FROM kraken_ohlc_hour
-    JOIN symbols AS _symbol ON kraken_ohlc_hour.symbol_id = input_symbol_id 
     WHERE kraken_ohlc_hour.symbol_id = input_symbol_id 
     AND kraken_ohlc_hour.bucket >= input_start_date - interval_duration 
     AND input_start_date >= kraken_ohlc_hour.bucket 
@@ -352,63 +277,6 @@ SELECT add_continuous_aggregate_policy('kraken_ohlc_day',
     end_offset => INTERVAL '1 day',
     schedule_interval => INTERVAL '1 day');
 
--- using symbol 
--- CREATE OR REPLACE FUNCTION get_ohlc_day (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_symbol TEXT 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     open_price NUMERIC,
---     high NUMERIC,
---     low NUMERIC,
---     close_price NUMERIC,
---     volume NUMERIC,
---     symbol TEXT
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- symbol_id_result INTEGER;
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 day';
---     
---     IF input_symbol = 'all' THEN
---         RETURN QUERY SELECT 
---             kraken_ohlc_day.bucket,
---             kraken_ohlc_day.open_price,
---             kraken_ohlc_day.high,
---             kraken_ohlc_day.low,
---             kraken_ohlc_day.close_price,
---             kraken_ohlc_day.volume,
---             kraken_ohlc_day.count,
---             _symbol.symbol AS symbol
---         FROM kraken_ohlc_day
---         JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
---         WHERE kraken_ohlc_day.bucket >= NOW() - interval_duration
---         ORDER BY kraken_ohlc_day.bucket;
--- 
---     ELSE
---         SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
--- 	
---         RETURN QUERY SELECT 
---             kraken_ohlc_day.bucket,
---             kraken_ohlc_day.open_price,
---             kraken_ohlc_day.high,
---             kraken_ohlc_day.low,
---             kraken_ohlc_day.close_price,
---             kraken_ohlc_day.volume,
---             kraken_ohlc_day.count,
---             _symbol.symbol AS symbol
---         FROM kraken_ohlc_day
---         JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
---         WHERE kraken_ohlc_day.symbol_id = symbol_id_result 
---         AND kraken_ohlc_day.bucket >= NOW() - interval_duration
---         ORDER BY kraken_ohlc_day.bucket; 
---     END IF;
--- END;$$;
-
 -- using symbol_id
 CREATE OR REPLACE FUNCTION get_ohlc_day (
     input_interval INTEGER, -- in days / all for all symbols
@@ -422,7 +290,7 @@ RETURNS TABLE (
     close_price NUMERIC,
     volume NUMERIC,
     count INTEGER,
-    symbol TEXT
+    symbol_id INTEGER
 )
 LANGUAGE plpgsql    
 AS $$
@@ -439,66 +307,13 @@ BEGIN
         kraken_ohlc_day.close_price,
         kraken_ohlc_day.volume,
         kraken_ohlc_day.count,
-        _symbol.symbol AS symbol
+        kraken_ohlc_day.symbol_id
     FROM kraken_ohlc_day
-    JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = input_symbol_id
     WHERE kraken_ohlc_day.symbol_id = input_symbol_id
     AND kraken_ohlc_day.bucket >= NOW() - interval_duration
     ORDER BY kraken_ohlc_day.bucket; 
 END;$$;
 
-
--- get ohlc using start date 
-CREATE OR REPLACE FUNCTION get_ohlc_day_start_date (
-    input_interval INTEGER, -- in days / all for all symbols
-    input_start_date TIMESTAMPTZ,
-    input_symbol TEXT 
-)
-RETURNS TABLE (
-    bucket TIMESTAMPTZ,
-    close_price NUMERIC,
-    volume NUMERIC,
-    count INTEGER, 
-    symbol TEXT
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE 
-symbol_id_result INTEGER;
-interval_duration INTERVAL; 
-BEGIN
-    interval_duration := input_interval * INTERVAL '1 day';
-    
-    IF input_symbol = 'all' THEN
-        RETURN QUERY SELECT 
-            kraken_ohlc_day.bucket,
-            kraken_ohlc_day.close_price,
-            kraken_ohlc_day.volume,
-            kraken_ohlc_day.count,
-            _symbol.symbol AS symbol
-        FROM kraken_ohlc_day
-        JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
-        WHERE kraken_ohlc_day.bucket >= input_start_date - interval_duration 
-        AND input_start_date >= kraken_ohlc_day.bucket 
-        ORDER BY kraken_ohlc_day.bucket;
-
-    ELSE
-        SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
-
-        RETURN QUERY SELECT 
-            kraken_ohlc_day.bucket,
-            kraken_ohlc_day.close_price,
-            kraken_ohlc_day.volume,
-            kraken_ohlc_day.count,
-            _symbol.symbol AS symbol
-        FROM kraken_ohlc_day
-        JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = _symbol.id 
-        WHERE kraken_ohlc_day.symbol_id = symbol_id_result 
-        AND kraken_ohlc_day.bucket >= input_start_date - interval_duration 
-        AND input_start_date >= kraken_ohlc_day.bucket 
-        ORDER BY kraken_ohlc_day.bucket; 
-    END IF;
-END;$$;
 
 -- get ohlc using start date and symbol_id
 CREATE OR REPLACE FUNCTION get_ohlc_day_start_date (
@@ -511,7 +326,7 @@ RETURNS TABLE (
     close_price NUMERIC,
     volume NUMERIC,
     count INTEGER, 
-    symbol TEXT
+    symbol_id INTEGER
 )
 LANGUAGE plpgsql    
 AS $$
@@ -525,16 +340,13 @@ BEGIN
         kraken_ohlc_day.close_price,
         kraken_ohlc_day.volume,
         kraken_ohlc_day.count,
-        _symbol.symbol AS symbol
+        kraken_ohlc_day.symbol_id
     FROM kraken_ohlc_day
-    JOIN symbols AS _symbol ON kraken_ohlc_day.symbol_id = input_symbol_id 
     WHERE kraken_ohlc_day.symbol_id = input_symbol_id
     AND kraken_ohlc_day.bucket >= input_start_date - interval_duration 
     AND input_start_date >= kraken_ohlc_day.bucket 
     ORDER BY kraken_ohlc_day.bucket; 
-
 END;$$;
-
 
 -- model config for easy swapping of models
 CREATE TABLE model_configs (
