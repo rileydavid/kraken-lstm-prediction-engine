@@ -29,7 +29,16 @@ use tracing::info;
 
 use crate::domain::ohlc::{OhlcCacheDto, OhlcKeyDto, timestamp_to_datetime};
 
-// Maybe move all this to it's own module --> similar to repository
+// switch all tables to use double precision 
+// --> better for timescale db (contious aggregates)
+// --> no conversion needed for redis
+
+// Issue how manage the cache?
+// --> need to know when to update the cache
+
+// no issue when getting certain date range (in the past) --> just make sure there is a timestamp each hour 
+// getting fromDate to current time is problematic as the current value is still being updated constantly
+
 
 // 
 // idea check if values are in cache by checking these two keys
@@ -206,6 +215,8 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
             let close_price = FromPrimitive::from_f64(*value).unwrap();
 
             //TODO: improve this somehow
+            // create function for this
+
             let open_price = master_map
                 .get(OPEN_PRICE)
                 .and_then(|m| m.get(key))
@@ -257,6 +268,15 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
     }
 
     Ok(result)
+}
+
+
+// TOOD: make use of this 
+fn get_value_from_map(master_map: &HashMap<String, HashMap<String, f64>>, key: &str, value_key: &str) -> Option<f64> {
+    master_map
+        .get(value_key)
+        .and_then(|m| m.get(key))
+        .and_then(|v| FromPrimitive::from_f64(*v))
 }
 
 
