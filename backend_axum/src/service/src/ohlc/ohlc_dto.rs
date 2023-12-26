@@ -1,4 +1,4 @@
-use bigdecimal::{BigDecimal, FromPrimitive};
+
 use cache::domain::ohlc::{OhlcCacheDto, OhlcLabel, timestamp_to_datetime};
 use chrono::{DateTime, Utc};
 use repository::domain::ohlc::OhlcModel;
@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 pub struct OhlcDto {
     bucket: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    open_price: Option<BigDecimal>,
+    open_price: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    high: Option<BigDecimal>,
+    high: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    low: Option<BigDecimal>,
-    close_price: BigDecimal,
-    volume: BigDecimal,
+    low: Option<f64>,
+    close_price: f64,
+    volume: f64,
     count: i32,
     symbol_id: i32,
 }
@@ -22,11 +22,11 @@ pub struct OhlcDto {
 impl OhlcDto {
     pub fn new(
         bucket: DateTime<Utc>,
-        open_price: Option<BigDecimal>,
-        high: Option<BigDecimal>,
-        low: Option<BigDecimal>,
-        close_price: BigDecimal,
-        volume: BigDecimal,
+        open_price: Option<f64>,
+        high: Option<f64>,
+        low: Option<f64>,
+        close_price: f64,
+        volume: f64,
         count: i32,
         symbol_id: i32,
     ) -> Self {
@@ -79,17 +79,17 @@ impl From<OhlcCacheDto> for OhlcDto {
         let mut open_price = None;
         let mut high = None;
         let mut low = None;
-        let mut close_price = BigDecimal::from(0);
-        let mut volume = BigDecimal::from(0);
+        let mut close_price = f64::from(0);
+        let mut volume = f64::from(0);
         let mut count = 0;
 
         for key_dto in cache.get_keys() {
             match key_dto.get_label() {
-                OhlcLabel::OpenPrice => open_price = FromPrimitive::from_f64(*key_dto.get_value()),
-                OhlcLabel::High => high = FromPrimitive::from_f64(*key_dto.get_value()),
-                OhlcLabel::Low => low = FromPrimitive::from_f64(*key_dto.get_value()),
-                OhlcLabel::ClosePrice => close_price = FromPrimitive::from_f64(*key_dto.get_value()).unwrap(),
-                OhlcLabel::Volume => volume = FromPrimitive::from_f64(*key_dto.get_value()).unwrap(),
+                OhlcLabel::OpenPrice => open_price = Some(*key_dto.get_value()),
+                OhlcLabel::High => high = Some(*key_dto.get_value()),
+                OhlcLabel::Low => low = Some(*key_dto.get_value()),
+                OhlcLabel::ClosePrice => close_price = Some(*key_dto.get_value()).unwrap(),
+                OhlcLabel::Volume => volume = Some(*key_dto.get_value()).unwrap(),
                 OhlcLabel::Count => count = *key_dto.get_value() as i32,
             }
         }

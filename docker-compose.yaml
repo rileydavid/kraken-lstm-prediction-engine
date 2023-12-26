@@ -17,9 +17,9 @@ services:
         ipv4_address: 172.1.0.10
     restart: always
     environment:
-      POSTGRES_DB: ${PG_USER}  #'db'
-      POSTGRES_USER: ${PG_DATABASE} #'admin'
-      POSTGRES_PASSWORD: ${PG_PASSWORD} # 'password'
+      POSTGRES_DB: 'db' #${PG_USER}  #'db'
+      POSTGRES_USER: 'admin' #${PG_DATABASE} #'admin'
+      POSTGRES_PASSWORD: 'password' # ${PG_PASSWORD} # 'password'
       PGDATA: '/pg-data'
       TZ: 'GMT+0'
       PGTZ: 'GMT+0'
@@ -99,17 +99,17 @@ services:
         --serve-artifacts 
         --default-artifact-root s3://${MLFLOW_BUCKET_NAME}
         
-  backend: 
-    build: ./backend_axum
-    container_name: backend
-    restart: always
-    ports:
-      - "${BACKEND_PORT}:8000"
-    volumes:
-      - ./data/import/:/import/
-    networks:
-      network:
-        ipv4_address: 172.1.0.14
+  #backend: 
+  #  build: ./backend_axum
+  #  container_name: backend
+  #  restart: always
+  #  ports:
+  #    - "${BACKEND_PORT}:8000"
+  #  volumes:
+  #    - ./data/import/:/import/
+  #  networks:
+  #    network:
+  #      ipv4_address: 172.1.0.14
 
   modelservice: 
     build: ./prediction-model-execution

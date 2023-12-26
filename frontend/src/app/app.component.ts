@@ -8,6 +8,8 @@ import { AppRoutingModule } from './app.routes';
 import { LineChartComponent } from './line-chart/line-chart.component';
 import { DataService } from './dataservice/data.service';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { ɵSharedStylesHost } from '@angular/platform-browser';
+import { SharedDateService } from './shareddate/shareddate.service';
 
 @Component({
     selector: 'app-root',
@@ -15,7 +17,7 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
     templateUrl: './app.component.html',
     styleUrl: './app.component.css',
     imports: [CommonModule, RouterLink, RouterOutlet, NavbarComponent, HttpClientModule],
-    providers: [DataService]
+    providers: [DataService, SharedDateService]
 })
 export class AppComponent {
   title = 'frontend';

@@ -36,7 +36,7 @@ pub async fn insert_trade(
         .bind(trade.get_volume())
         .bind(trade.get_side())
         .bind(trade.get_order_type())
-        .bind(trade.get_symbol())
+        .bind(trade.get_symbol_id())
         .execute(&mut *tx)
         .await
     {
@@ -44,3 +44,4 @@ pub async fn insert_trade(
         Err(err) => Err(RepositoryError::general_error(err.to_string())),
     }
 }
+

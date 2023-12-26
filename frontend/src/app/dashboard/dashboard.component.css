@@ -1,0 +1,17 @@
+.flex-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* adjust the value as needed */
+}
+
+.container {
+    display: flex;
+    justify-content: center; /* center horizontally */
+    align-items: center; /* center vertically */
+    margin-bottom: 20px; /* space between containers */
+}
+
+/* Optional: Set a specific height for the containers if you want more control over the vertical spacing */
+.container {
+    height: 200px; /* adjust as needed */
+}

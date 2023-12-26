@@ -1,0 +1,57 @@
+<p>datepicker works</p>
+
+
+<div class="flex-container">
+  <div class="datepicker">
+    <mat-form-field appearance="fill">
+      <mat-label>Start Date and Time</mat-label>
+      <input matInput [ngxMatDatetimePicker]="startDateTimePicker" [(ngModel)]="startDateTime"
+        placeholder="Select start date and time" (ngModelChange)="onDateChange(startDateTime, endDateTime)" >
+      <ngx-mat-datetime-picker #startDateTimePicker></ngx-mat-datetime-picker>
+      <ngx-mat-datepicker-toggle matSuffix [for]="startDateTimePicker"></ngx-mat-datepicker-toggle>
+    </mat-form-field>
+  </div>
+  <div class="datepicker">
+    <mat-form-field appearance="fill">
+      <mat-label>End Date and Time</mat-label>
+      <input matInput [ngxMatDatetimePicker]="endDateTimePicker" [(ngModel)]="endDateTime"
+        placeholder="Select end date and time" (ngModelChange)="onDateChange(startDateTime, endDateTime)" >
+      <ngx-mat-datetime-picker #endDateTimePicker></ngx-mat-datetime-picker>
+      <ngx-mat-datepicker-toggle matSuffix [for]="endDateTimePicker"></ngx-mat-datepicker-toggle>
+    </mat-form-field>
+  </div>
+
+  <!-- 
+    old 
+
+  <div class="datepicker">
+    <mat-form-field appearance="fill">
+      <mat-label>Start Date and Time</mat-label>
+      <input matInput [ngxMatDatetimePicker]="startDateTimePicker" placeholder="Select start date and time">
+      <ngx-mat-datetime-picker #startDateTimePicker ></ngx-mat-datetime-picker>
+      <ngx-mat-datepicker-toggle matSuffix [for]="startDateTimePicker"></ngx-mat-datepicker-toggle>
+    </mat-form-field>
+  </div>
+  <div class="datepicker">
+    <mat-form-field appearance="fill">
+      <mat-label>End Date and Time</mat-label>
+      <input matInput [ngxMatDatetimePicker]="endDateTimePicker" placeholder="Select end date and time">
+      <ngx-mat-datetime-picker #endDateTimePicker></ngx-mat-datetime-picker>
+      <ngx-mat-datepicker-toggle matSuffix [for]="endDateTimePicker"></ngx-mat-datepicker-toggle>
+    </mat-form-field>
+  </div>
+
+  -->
+
+</div>
+
+
+
+
+
+
+<!-- 
+  <mat-datepicker-toggle matSuffix [for]="endDateTimePicker"></mat-datepicker-toggle>
+  <mat-datepicker-toggle matSuffix [for]="startDateTimePicker"></mat-datepicker-toggle>
+
+-->

@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN mkdir model
 
 # launch model execution 
-CMD ["python", "-u", "server.py"]
+#CMD ["python", "-u", "server.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:7000", "wsgi:app"]
 
 # docker build -t model_execution .
 # docker run  model_execution

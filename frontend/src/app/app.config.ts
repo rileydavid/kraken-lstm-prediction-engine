@@ -6,5 +6,5 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { DataService } from './dataservice/data.service';
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideRouter(routes), provideNoopAnimations()]
+  providers: [provideRouter(routes), provideNoopAnimations(), provideNoopAnimations()]
 };

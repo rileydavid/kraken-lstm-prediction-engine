@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 
 use serde::{Deserialize, Serialize};
@@ -8,21 +7,21 @@ use sqlx::Row;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TradeModel {
     pub time: DateTime<Utc>,
-    pub price: BigDecimal,
-    pub volume: BigDecimal,
+    pub price: f64,
+    pub volume: f64,
     pub side: String,
     pub order_type: String,
-    pub symbol: String,
+    pub symbol_id: i32,
 }
 
 impl TradeModel {
     pub fn new(
         time: DateTime<Utc>,
-        price: BigDecimal,
-        volume: BigDecimal,
+        price: f64,
+        volume: f64,
         side: String,
         order_type: String,
-        symbol: String,
+        symbol_id: i32,
     ) -> TradeModel {
         TradeModel {
             time,
@@ -30,7 +29,7 @@ impl TradeModel {
             volume,
             side,
             order_type,
-            symbol,
+            symbol_id,
         }
     }
 }
@@ -39,10 +38,10 @@ impl TradeModel {
     pub fn get_time(&self) -> &DateTime<Utc> {
         &self.time
     }
-    pub fn get_price(&self) -> &BigDecimal {
+    pub fn get_price(&self) -> &f64 {
         &self.price
     }
-    pub fn get_volume(&self) -> &BigDecimal {
+    pub fn get_volume(&self) -> &f64 {
         &self.volume
     }
     pub fn get_side(&self) -> &str {
@@ -51,8 +50,8 @@ impl TradeModel {
     pub fn get_order_type(&self) -> &str {
         &self.order_type[..]
     }
-    pub fn get_symbol(&self) -> &str {
-        &self.symbol[..]
+    pub fn get_symbol_id(&self) -> &i32 {
+        &self.symbol_id
     }
 }
 
@@ -61,11 +60,11 @@ impl TradeModel {
         self.time = time;
     }
 
-    pub fn set_price(&mut self, price: BigDecimal) {
+    pub fn set_price(&mut self, price: f64) {
         self.price = price;
     }
 
-    pub fn set_volume(&mut self, volume: BigDecimal) {
+    pub fn set_volume(&mut self, volume: f64) {
         self.volume = volume;
     }
 
@@ -77,8 +76,8 @@ impl TradeModel {
         self.order_type = order_type;
     }
 
-    pub fn set_symbol(&mut self, symbol: String) {
-        self.symbol = symbol;
+    pub fn set_symbol_id(&mut self, symbol_id: i32) {
+        self.symbol_id = symbol_id;
     }
 }
 
@@ -90,7 +89,7 @@ impl From<PgRow> for TradeModel {
             value.get("volume"),
             value.get("side"),
             value.get("order_type"),
-            value.get("symbol"),
+            value.get("symbol_id"),
         )
     }
 }

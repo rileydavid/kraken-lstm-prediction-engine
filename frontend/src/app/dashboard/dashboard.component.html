@@ -1,3 +1,14 @@
 <p>dashboard works!</p>
-<app-line-chart></app-line-chart>
+
+<div class="flex-container">
+    <div class="container">
+        <app-datepicker (startDateChange)="onStartDateChange($event)" (endDateChange)="onEndDateChange($event)"></app-datepicker>
+        <button mat-button (click)="onButtonClick()">Get Dates</button>
+    </div>
+    
+    <div class="container">
+        <app-line-chart></app-line-chart>
+    </div>
+    
+</div>
 <p>show</p>

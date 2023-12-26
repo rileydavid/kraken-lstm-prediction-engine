@@ -18,6 +18,7 @@ export class DataService {
   }
 
   fetchOhlcDayData() {
+    console.log("fetchOhlcDayData");
     return this.http.get<Ohlc[]>(this.baseUrl + "/ohlc/day/1/100").pipe(
       map(data => data.map(item => ({
         bucket: new Date(item.bucket),
@@ -33,6 +34,7 @@ export class DataService {
   }
 
   fetchOhlcHourData() {
+    console.log("fetchOhlcHourData");
     return this.http.get<Ohlc[]>(this.url).pipe(
       map(data => data.map(item => ({
         bucket: new Date(item.bucket),

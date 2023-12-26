@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use repository::domain::trade::TradeModel;
 use serde::{Deserialize, Serialize};
@@ -8,21 +7,21 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct TradeDto {
     time: DateTime<Utc>,
-    price: BigDecimal,
-    volume: BigDecimal,
+    price: f64,
+    volume: f64,
     side: String,
     order_type: String,
-    symbol: String,
+    symbol_id: i32,
 }
 
 impl TradeDto {
     pub fn new(
         time: DateTime<Utc>,
-        price: BigDecimal,
-        volume: BigDecimal,
+        price: f64,
+        volume: f64,
         side: String,
         order_type: String,
-        symbol: String,
+        symbol_id: i32,
     ) -> Self {
         TradeDto {
             time,
@@ -30,7 +29,7 @@ impl TradeDto {
             volume,
             side,
             order_type,
-            symbol,
+            symbol_id,
         }
     }
 }
@@ -43,7 +42,7 @@ impl From<TradeModel> for TradeDto {
             value.get_volume().to_owned(),
             value.get_side().to_owned(),
             value.get_order_type().to_owned(),
-            value.get_symbol().to_owned(),
+            value.get_symbol_id().to_owned(),
         )
     }
 }
@@ -56,7 +55,7 @@ impl From<TradeDto> for TradeModel {
             value.volume,
             value.side,
             value.order_type,
-            value.symbol,
+            value.symbol_id,
         )
     }
 }

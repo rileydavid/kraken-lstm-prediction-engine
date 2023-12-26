@@ -1,0 +1,14 @@
+.flex-container {
+    display: flex;
+    justify-content: space-between; /* This will space out the items */
+    align-items: center; /* Aligns items vertically in the center */
+    background-color: white;
+}
+
+.flex-container > div {
+    flex: 1; /* Each child div will take up equal space */
+    margin: 0 10px; /* Optional: Adds some space between the divs */
+}
+
+.datepicker {
+    background-color: white;}

@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 
 use serde::{Deserialize, Serialize};
@@ -8,11 +7,11 @@ use sqlx::Row;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OhlcModel {
     bucket: DateTime<Utc>,
-    open_price: Option<BigDecimal>,
-    high: Option<BigDecimal>,
-    low: Option<BigDecimal>,
-    close_price: BigDecimal,
-    volume: BigDecimal,
+    open_price: Option<f64>,
+    high: Option<f64>,
+    low: Option<f64>,
+    close_price: f64,
+    volume: f64,
     count: i32,
     symbol_id: i32, 
 }
@@ -20,11 +19,11 @@ pub struct OhlcModel {
 impl OhlcModel {
     pub fn new(
         bucket: DateTime<Utc>,
-        open_price: Option<BigDecimal>,
-        high: Option<BigDecimal>,
-        low: Option<BigDecimal>,
-        close_price: BigDecimal,
-        volume: BigDecimal,
+        open_price: Option<f64>,
+        high: Option<f64>,
+        low: Option<f64>,
+        close_price: f64,
+        volume: f64,
         count: i32,
         symbol_id: i32,
     ) -> OhlcModel {
@@ -45,19 +44,19 @@ impl OhlcModel {
     pub fn get_bucket(&self) -> &DateTime<Utc> {
         &self.bucket
     }
-    pub fn get_open_price(&self) -> &Option<BigDecimal> {
+    pub fn get_open_price(&self) -> &Option<f64> {
         &self.open_price
     }
-    pub fn get_high(&self) -> &Option<BigDecimal> {
+    pub fn get_high(&self) -> &Option<f64> {
         &self.high
     }
-    pub fn get_low(&self) -> &Option<BigDecimal> {
+    pub fn get_low(&self) -> &Option<f64> {
         &self.low
     }
-    pub fn get_close_price(&self) -> &BigDecimal {
+    pub fn get_close_price(&self) -> &f64 {
         &self.close_price
     }
-    pub fn get_volume(&self) -> &BigDecimal {
+    pub fn get_volume(&self) -> &f64 {
         &self.volume
     }
     pub fn get_count(&self) -> &i32 {

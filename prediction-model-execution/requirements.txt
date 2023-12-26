@@ -9,3 +9,4 @@ cloudpickle
 scikit-learn
 scipy==1.9.3
 tensorflow==2.14.0
+gunicorn
