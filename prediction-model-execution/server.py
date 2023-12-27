@@ -9,7 +9,7 @@ def execute_model():
         config = request.json
         model_execution = ModelExecution(config)
         timestamp, price = model_execution.execute()
-        return jsonify({"bucket": timestamp, "price": price.item()}), 200
+        return jsonify({"bucket": timestamp, "close_price": price.item()}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

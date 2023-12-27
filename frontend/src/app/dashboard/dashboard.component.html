@@ -1,14 +1,24 @@
-<p>dashboard works!</p>
-
 <div class="flex-container">
-    <div class="container">
-        <app-datepicker (startDateChange)="onStartDateChange($event)" (endDateChange)="onEndDateChange($event)"></app-datepicker>
-        <button mat-button (click)="onButtonClick()">Get Dates</button>
+    <div class="selection-row">
+        <div class="container app-symbolpicker">
+            <app-symbolpicker (selectedSymbolEvent)="handleSymbolEvent($event)"></app-symbolpicker>
+        </div>
+        <div class="date-selection-container">
+            <div class="container app-datepicker common-height">
+                <app-datepicker (fromDateChange)="onFromDateChange($event)" (toDateChange)="onToDateChange($event)"></app-datepicker>
+            </div>
+        </div>
+        <div class="container app-button common-height">
+            <div class="container">
+                <button mat-stroked-button class="button" (click)="onButtonClick()">Fetch</button>
+            </div>
+        </div>
     </div>
-    
-    <div class="container">
-        <app-line-chart></app-line-chart>
+    <div class="container app-line-chart">
+        <app-line-chart #lineChartRef  
+        [selected]="selected" [loadingData]="loadingData"></app-line-chart>
     </div>
-    
+    <div class="spacer"></div>
+    <div class="container app-ohlc-table">
+        <app-ohlc-table #ohlcTableRef [data]="data" [hidden]="!selected"></app-ohlc-table>
 </div>
-<p>show</p>

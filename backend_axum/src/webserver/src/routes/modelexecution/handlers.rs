@@ -6,7 +6,7 @@ use axum::Json;
 use super::dto::ModelExecutionRequestDto;
 
 pub async fn post_execute_model(Json(payload): Json<ModelExecutionRequestDto>) -> Result<Json<PredictionResponseDto>, ResponseError> {
-    let result = modelexecution_service::execute_model( payload.start_date, payload.symbol_id).await;
+    let result = modelexecution_service::execute_model( payload.from_date, payload.symbol_id).await;
     prepare_response(result)
 }
 

@@ -3,7 +3,9 @@ use chrono::{DateTime, Utc};
 use repository::domain::model_config::ModelConfigModel;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+use crate::ohlc::ohlc_dto::OhlcDto;
+
+#[derive(Serialize, Deserialize)]
 pub struct PredictionRequestDto {
     id: i32,
     symbol_id: i32,
@@ -15,7 +17,8 @@ pub struct PredictionRequestDto {
     span_sizes: Vec<i32>,
     active: bool,
     features: Vec<String>,
-    start_date: Option<DateTime<Utc>>,
+    from_date: Option<DateTime<Utc>>,
+    data: Option<Vec<OhlcDto>>, // TODO: maybe it makes sense to send the data directly to the model service
 }
 
 impl PredictionRequestDto {
@@ -30,7 +33,8 @@ impl PredictionRequestDto {
         span_sizes: Vec<i32>,
         active: bool,
         features: Vec<String>,
-        start_date: Option<DateTime<Utc>>,
+        from_date: Option<DateTime<Utc>>,
+        data: Option<Vec<OhlcDto>>
     ) -> Self {
         PredictionRequestDto {
             id, 
@@ -43,14 +47,19 @@ impl PredictionRequestDto {
             span_sizes,
             active,
             features,
-            start_date,
+            from_date,
+            data
         }
     }
 }
 
 impl PredictionRequestDto {
-    pub fn set_start_date(&mut self, start_date: DateTime<Utc>) {
-        self.start_date = Some(start_date);
+    pub fn set_from_date(&mut self, from_date: DateTime<Utc>) {
+        self.from_date = Some(from_date);
+    }
+
+    pub fn set_data(&mut self, data: Vec<OhlcDto>) {
+        self.data = Some(data);
     }
 }
 
@@ -67,6 +76,7 @@ impl From<ModelConfigModel> for PredictionRequestDto {
             value.get_span_sizes().to_owned(),
             value.is_active().to_owned(),
             value.get_features().to_owned(),
+            None,
             None
         )
     }
@@ -75,12 +85,12 @@ impl From<ModelConfigModel> for PredictionRequestDto {
 #[derive(Serialize, Deserialize)]
 pub struct PredictionResponseDto {
     bucket: DateTime<Utc>,
-    price: BigDecimal,
+    close_price: BigDecimal,
 }
 
 impl PredictionResponseDto {
-    pub fn new(bucket: DateTime<Utc>, price: BigDecimal) -> Self {
-        PredictionResponseDto { bucket, price }
+    pub fn new(bucket: DateTime<Utc>, close_price: BigDecimal) -> Self {
+        PredictionResponseDto { bucket, close_price }
     }
 }
 

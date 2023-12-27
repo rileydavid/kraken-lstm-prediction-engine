@@ -1,0 +1,8 @@
+<mat-form-field appearance="fill">
+    <mat-label>Select a Symbol</mat-label>
+    <mat-select [(ngModel)]="selectedSymbol" (selectionChange)="onSymbolSelected($event)">
+        <mat-option *ngFor="let symbol of symbols" [value]="symbol">
+            {{ symbol.symbol }}
+        </mat-option>
+    </mat-select>
+</mat-form-field>

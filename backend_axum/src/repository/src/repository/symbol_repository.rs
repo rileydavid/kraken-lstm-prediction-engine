@@ -4,7 +4,8 @@ use sqlx::{Postgres, Transaction};
 use utils::error::generic_error::GenericError;
 use utils::error::repository_error::RepositoryError;
 
-const QUERY_SELECT_SYMBOLS: &str = "SELECT id AS out_id, symbol AS out_symbol FROM symbols;";
+//const QUERY_SELECT_SYMBOLS: &str = "SELECT id AS out_id, symbol AS out_symbol FROM symbols;";
+const QUERY_SELECT_SYMBOLS: &str = "SELECT * FROM symbols;";
 const QUERY_INSERT_SYMBOL_RETURNING_ID_SYMBOL: &str =
     "SELECT * FROM insert_symbol($1);";
 

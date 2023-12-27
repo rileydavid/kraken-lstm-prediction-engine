@@ -33,8 +33,8 @@ impl SymbolModel {
 impl From<PgRow> for SymbolModel {
     fn from(value: PgRow) -> Self {
         SymbolModel::new(
-            value.get("out_id"),
-            value.get("out_symbol"),
+            value.get("id"),
+            value.get("symbol"),
         )
     }
 }

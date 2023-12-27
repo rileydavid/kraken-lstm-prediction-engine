@@ -6,13 +6,9 @@ div {
 
 svg {
     display: block;
-    /* May help if SVG is not aligning center */
     margin: auto;
-    /* Helps center the SVG if flex properties don't work as intended */
     background-color: #f9f9f9;
-    /* Optional: to make it easier to see the SVG bounds */
     border: 1px solid #ccc;
-    /* Optional: to see the SVG boundaries */
 }
 
 .loading-indicator {
@@ -20,7 +16,6 @@ svg {
     justify-content: center;
     align-items: center;
     height: 100px;
-    /* or however tall you want it to be */
 }
 
 .grid line {

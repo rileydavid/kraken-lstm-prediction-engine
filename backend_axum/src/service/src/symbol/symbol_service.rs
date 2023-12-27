@@ -5,6 +5,7 @@ use utils::core::postgresdb::TxAsync;
 use utils::error::generic_error::GenericError;
 
 pub async fn get_symbols() -> Result<Vec<SymbolDto>, GenericError> {
+
     let mut tx = Tx::begin().await;
     match symbol_repository::get_symbols(&mut tx).await {
         Ok(data) => {

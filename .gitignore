@@ -20,6 +20,7 @@ Cargo.lock
 /data/pgadmin
 /data/timescale
 /data/minio
+/data/redis/
 /prediction-model-development/*.csv
 /prediction-model-execution/*.csv
 

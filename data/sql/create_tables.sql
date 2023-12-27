@@ -160,6 +160,8 @@ WITH (timescaledb.continuous) AS
     FROM trade
 GROUP BY bucket, symbol_id; -- do i need the bucket here? TODO Test this? might improve performance
 
+CREATE INDEX ohlc_hour_idx ON ohlc_hour (symbol_id, bucket);
+
 SELECT add_continuous_aggregate_policy('ohlc_hour',
     start_offset => INTERVAL '3 hour', 
     end_offset => INTERVAL '1 hour',
@@ -231,6 +233,36 @@ BEGIN
     WHERE ohlc_hour.symbol_id = input_symbol_id 
     AND ohlc_hour.bucket >= input_start_date - interval_duration 
     AND input_start_date >= ohlc_hour.bucket 
+    ORDER BY ohlc_hour.bucket; 
+END;$$;
+
+CREATE OR REPLACE FUNCTION get_ohlc_hour_range (
+    input_from_date TIMESTAMPTZ,
+    input_to_date TIMESTAMPTZ,
+    input_symbol_id INTEGER 
+)
+RETURNS TABLE (
+    bucket TIMESTAMPTZ,
+    close_price DOUBLE PRECISION,
+    volume DOUBLE PRECISION,
+    count INTEGER, 
+    symbol_id INTEGER
+)
+LANGUAGE plpgsql    
+AS $$
+DECLARE 
+interval_duration INTERVAL; 
+BEGIN
+    RETURN QUERY SELECT 
+        ohlc_hour.bucket,
+        ohlc_hour.close_price,
+        ohlc_hour.volume,
+        ohlc_hour.count,
+        ohlc_hour.symbol_id
+    FROM ohlc_hour
+    WHERE ohlc_hour.symbol_id = input_symbol_id
+    AND ohlc_hour.bucket >= input_from_date  
+    AND input_to_date >= ohlc_hour.bucket 
     ORDER BY ohlc_hour.bucket; 
 END;$$;
 
@@ -426,7 +458,7 @@ CREATE TABLE IF NOT EXISTS kraken_prediction (
     time TIMESTAMPTZ NOT NULL,
     price DOUBLE PRECISION NOT NULL,  
     symbol_id SERIAL NOT NULL,
-    model_config_id SERIAL NOT NULL
+    model_id SERIAL NOT NULL
 );
 
 -- there should only be one entry for a model/timestamp

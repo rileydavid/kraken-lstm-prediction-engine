@@ -6,7 +6,7 @@ pub async fn copy_csv(
     tx: &mut Transaction<'static, Postgres>,
     file_path: String, 
 ) -> Result<String, GenericError> {
-    let prepared_query = format!("COPY kraken_trade (time, price, volume, side, order_type, symbol_id) FROM '{}' DELIMITER ',';", file_path);
+    let prepared_query = format!("COPY trade (time, price, volume, side, order_type, symbol_id) FROM '{}' DELIMITER ',';", file_path);
     match sqlx::query(&prepared_query)
         .execute(&mut *tx)
         .await

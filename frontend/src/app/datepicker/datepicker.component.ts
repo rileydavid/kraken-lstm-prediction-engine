@@ -1,16 +1,12 @@
 import { Component, EventEmitter, Output } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import {MatNativeDateModule} from '@angular/material/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import {MatDatepickerModule} from '@angular/material/datepicker';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { NgxMatDatetimePickerModule, NgxMatNativeDateModule, NgxMatTimepickerModule } from '@angular-material-components/datetime-picker';
 import { MatInputModule } from '@angular/material/input';
-import { SharedDateService } from '../shareddate/shareddate.service';
 
-
-const today = new Date();
-const month = today.getMonth();
-const year = today.getFullYear();
+// for testing purposes
+const today: Date = new Date("2023-09-28T12:00:00");
 
 @Component({
   selector: 'app-datepicker',
@@ -26,49 +22,36 @@ const year = today.getFullYear();
     MatDatepickerModule,
     MatFormFieldModule,
   ],
-  providers: [SharedDateService],
+  providers: [],
   templateUrl: './datepicker.component.html',
   styleUrl: './datepicker.component.css'
 })
 export class DatepickerComponent {
-  @Output() startDateChange = new EventEmitter<Date>();
-  @Output() endDateChange = new EventEmitter<Date>();
+  @Output() fromDateChange = new EventEmitter<Date>();
+  @Output() toDateChange = new EventEmitter<Date>();
 
-  endDateTime: Date = today;
-  startDateTime: Date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() - 1, today.getMinutes());
+  fromDateTime: Date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours(), 0);
+  toDateTime: Date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 12, 0);
 
-  constructor(private sharedDateService: SharedDateService) {}
+  constructor() {}
 
-  onDateChange(startDateTime: Date, endDateTime: Date): void {
-    console.log("onDateChange");
-    console.log("on date ", startDateTime, endDateTime);
-    
-    this.setStartDate(startDateTime);
-    this.setEndDate(endDateTime); 
+  onDateChange(fromDateTime: Date, toDateTime: Date): void {
+    this.setFromDate(fromDateTime);
+    this.setToDate(toDateTime); 
   }
 
   ngOnInit(): void {
+    this.setFromDate(this.fromDateTime);
+    this.setToDate(this.toDateTime);
   }
 
-  setStartDate(date: Date): void {
-    this.startDateChange.emit(date);
+  setFromDate(date: Date): void {
+    this.fromDateChange.emit(date);
   }
 
-  setEndDate(date: Date): void {
-    this.endDateChange.emit(date);
+  setToDate(date: Date): void {
+    this.toDateChange.emit(date);
   }
-
-  /*
-  getStartDateTimeUTC(): number {
-    return this.startDateTime.getTime();
-  }
-
-  getEndDateTimeUTC(): number {
-    return this.endDateTime.getTime();
-  }
-  */
-
-
 }
 
 

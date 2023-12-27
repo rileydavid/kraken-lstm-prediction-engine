@@ -1,18 +1,17 @@
 .navbar {
   display: flex;
-  justify-content: center; /* This centers the nav items horizontally */
-  align-items: center;     /* This centers the nav items vertically if needed */
-  height: 60px;            /* Example height - adjust as necessary */
-  background-color: #333;  /* Example background color */
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  background-color: #333;
 }
 
 .navbar a {
-  margin: 0 10px;          /* Adds spacing between nav items */
+  margin: 0 10px;
   color: white;
   text-decoration: none;
 }
 
-/* Additional styles for hover effect, etc. */
 .navbar a:hover {
   color: #ddd;
 }

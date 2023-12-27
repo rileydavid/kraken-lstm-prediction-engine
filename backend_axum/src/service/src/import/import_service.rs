@@ -1,6 +1,6 @@
 use repository::repository::{import_repository, symbol_repository};
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 use utils::core::postgresdb::TxAsync;
 use utils::error::service_error::ServiceError;
 use utils::{core::postgresdb::Tx, error::generic_error::GenericError};
@@ -85,7 +85,6 @@ fn convert(file_path: PathBuf, symbol_id: i32) -> Result<(), GenericError> {
                         index,
                         part.to_string() + ",,," + &symbol_id.to_string() + "\n",
                     );
-                    //&file_name.replace(".csv", "")
                 }
                 _ => {
                     converted.insert(index, part.to_string());

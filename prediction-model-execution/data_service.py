@@ -10,24 +10,24 @@ class DataService:
         url = f"{self.base_url_ohlc_hour}/{symbol}/{interval}"
         return self.fetch_data_get(url)
 
-    def get_ohlc_hour_start_date(self, symbol, interval, start_date):
+    def get_ohlc_hour_start_date(self, symbol, interval, from_date):
         url = f"{self.base_url_ohlc_hour}/start"
 
         data = {
             "symbol_id": symbol,
             "interval": interval.item(),
-            "start_date": start_date
+            "from_date": from_date
         }
 
         print(data)
         return self.fetch_data_post(url, data)
     
-    def get_ohlc_day_start_date(self, symbol, interval, start_date):
+    def get_ohlc_day_start_date(self, symbol, interval, from_date):
         url = f"{self.base_url_ohlc_day}/start"
         data = {
             "symbol_id": symbol,
             "interval": interval.item(),
-            "start_date": start_date
+            "from_date": from_date
         }
         return self.fetch_data_post(url, data)
 

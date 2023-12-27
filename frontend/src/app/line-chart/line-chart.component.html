@@ -1,8 +1,9 @@
-<p>line-chart works!</p>
-<div *ngIf="isLoading" class="loading-indicator">
-    Loading data...
+<div *ngIf="loadingData" class="loading-indicator">
+    <mat-spinner></mat-spinner>
 </div>
-<div *ngIf="!isLoading">
+<div *ngIf="!selected" class="select-indicator">
+    Please select a symbol and date range to fetch data.
+</div>
+<div [hidden]="selected">
     <div #chart></div>
 </div>
-<div *ngIf="!isLoading"><p>isLoading is done</p></div>

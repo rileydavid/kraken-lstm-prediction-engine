@@ -5,7 +5,7 @@ use utils::core::logger;
 use webserver;
 use utils::core::cache;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() -> Result<(), ()> {
     dotenv().ok();
     logger::run().await;
