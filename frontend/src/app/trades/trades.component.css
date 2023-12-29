@@ -1,0 +1,62 @@
+.selection-row {
+    display: flex;
+    justify-content: center; 
+    align-items: center; 
+    margin: 20px;
+}
+
+.common-height {
+    height: 36px; /* Or any other value that works for your design */
+}
+
+/* If your datepicker and symbol picker have different heights, align-items: center may cause them to be misaligned */
+/* You can use flex-start or a specific height to align them along the top instead, if needed */
+
+.container {
+    /* Remove the margin property if you're using gap in .selection-row */
+    /* margin: 10px; */ /* space around containers, you can remove it if you're using gap */
+    display: flex;
+    flex-direction: column; /* Stack the items vertically */
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+}
+
+.button {
+    flex: auto;
+    height: 36px; /* This should match the height of the form elements */
+    margin-bottom: 10px; /* Adjust as needed */
+    font-size: normal; /* Adjust as needed */
+}
+
+.date-selection-container {
+    display: flex;
+    align-items: center; /* Aligns the children vertically */
+    gap: 10px; /* Adjust the gap between items as needed */
+}
+
+.datepicker-button-container {
+    display: flex;
+    align-items: center; /* This ensures that the button is vertically centered with the datepickers */
+}
+
+.app-symbolpicker,
+.app-datepicker {
+    /* Adjust flex-grow, flex-shrink, and flex-basis as needed for your layout */
+    flex: 1 1 auto;
+}
+
+.spacer {
+    height: 20px; /* or any other size */
+    display: block; /* to ensure it takes up space as a block element */
+}
+  
+
+/* To prevent wrapping or misalignment, you might want to control the width of the datepickers and button */
+@media (min-width: 768px) { /* Adjust breakpoint as needed */
+    .app-symbolpicker,
+    .app-datepicker,
+    .datepicker-button-container {
+        flex: 0 0 auto;
+        width: auto; 
+    }
+}

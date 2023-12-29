@@ -1,9 +1,9 @@
 use repository::repository::{import_repository, symbol_repository};
+use sqlx::PgPool;
 use std::fs;
 use std::path::PathBuf;
-use utils::core::postgresdb::TxAsync;
+use utils::error::generic_error::GenericError;
 use utils::error::service_error::ServiceError;
-use utils::{core::postgresdb::Tx, error::generic_error::GenericError};
 
 use chrono::NaiveDateTime;
 use std::fs::read_to_string;
@@ -15,30 +15,26 @@ use std::os::unix::fs::PermissionsExt;
 const IMPORT_TIMESCALE: &str = "/import/";
 const IMPORT: &str = "../import/";
 
-pub async fn import_file(file_name: String, symbol: String) -> Result<String, GenericError> {
+pub async fn import_file(
+    pool: &PgPool,
+    file_name: String,
+    symbol: String,
+) -> Result<String, GenericError> {
     match file_name_path(&file_name) {
-        Some(path) => {
-            let mut tx = Tx::begin().await;
-            match symbol_repository::get_symbol_id(&mut tx, symbol).await {
-                Ok(symbol_id) => {
-                    Tx::commit(tx).await;
-                    match convert(path, symbol_id) {
-                        Ok(_) => {
-                            let mut tx = Tx::begin().await;
-                            let result = import_repository::copy_csv(
-                                &mut tx,
-                                IMPORT_TIMESCALE.to_owned() + "converted.csv".into(),
-                            )
-                            .await;
-                            Tx::commit(tx).await;
-                            result
-                        }
-                        Err(err) => return Err(err),
-                    }
+        Some(path) => match symbol_repository::get_symbol_id(pool, symbol).await {
+            Ok(symbol_id) => match convert(path, symbol_id) {
+                Ok(_) => {
+                    let result = import_repository::copy_csv(
+                        pool,
+                        IMPORT_TIMESCALE.to_owned() + "converted.csv".into(),
+                    )
+                    .await;
+                    result
                 }
                 Err(err) => return Err(err),
-            }
-        }
+            },
+            Err(err) => return Err(err),
+        },
         None => Err(ServiceError::general_error(format!(
             "file_name: {:?} not found",
             file_name

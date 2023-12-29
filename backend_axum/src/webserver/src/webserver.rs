@@ -1,28 +1,18 @@
-use crate::routes;
+use crate::{routes, utils::app_state::AppState};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::Router;
-use std::{net::SocketAddr, sync::Arc};
+use tokio::net::TcpListener;
+use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
-use utils::core::webserver_config::get_address;
-use rustis::{
-    client::Client,
-    commands::{GenericCommands, StringCommands},
-};
+use utils::core::{webserver_config::get_address, postgresdb};
 
-#[derive(Clone)]
-pub struct Testing {
-    client: Arc<Client>,
-}
-
-impl Testing {
-    pub fn new(client: Arc<Client>) -> Self {
-        Testing { client }
-    }
-}
 
 pub async fn run() {
+
     let redis = utils::core::cache::init_client().await;
+    let pool = postgresdb::get_connection().await; 
+    let app_state = AppState::new(pool.clone(), redis);
 
     let cors = CorsLayer::new()
         .allow_methods(Any)
@@ -31,19 +21,27 @@ pub async fn run() {
 
     let app = Router::new()
         .route("/ping", get(ping))
-        .merge(routes::ohlc::routes::router(redis).await)
-        .merge(routes::symbol::routes::router().await)
-        .merge(routes::import::routes::router().await)
-        .merge(routes::modelexecution::routes::router().await)
-        .merge(routes::trade::routes::router().await)
+        .merge(routes::ohlc::routes::router(pool).await)
+        .merge(routes::symbol::routes::router(app_state).await)
+        .merge(routes::import::routes::router(pool).await)
+        .merge(routes::modelexecution::routes::router(pool).await)
+        .merge(routes::trade::routes::router(pool).await)
         .layer(cors);
 
     let adress = SocketAddr::from(get_address().await);
 
+    let listener = TcpListener::bind(adress).await.unwrap();
+
+    axum::serve(listener, app.into_make_service())
+        .await
+        .unwrap_or_else(|_| panic!("Server cannot launch."));
+
+    /*
     axum::Server::bind(&adress)
         .serve(app.into_make_service())
         .await
         .unwrap_or_else(|_| panic!("Server cannot launch."));
+     */
 }
 
 pub async fn ping() -> Result<String, StatusCode> {

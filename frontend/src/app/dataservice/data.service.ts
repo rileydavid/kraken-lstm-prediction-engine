@@ -3,10 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs';
 import { Ohlc } from '../models/ohlc.model';
 import { SymbolModel } from '../models/symbol.model';
+import { Trade } from '../models/trade.model';
 
-const baseUrl = 'http://127.0.0.1:8000';
-const ohlcHourRange = `${baseUrl}/ohlc/hour/range`;
-const ohclHourPrediction = `${baseUrl}/execute/model`;
+const baseUrl = 'http://172.1.0.14:8000';
+//const baseUrl = 'http://127.0.0.1:8000';
+
+const ohlcHourRangeUrl = `${baseUrl}/ohlc/hour/range`;
+const ohclHourPredictionUrl = `${baseUrl}/execute/model`;
+const tradesUrl = `${baseUrl}/trades`;
 
 @Injectable({
   providedIn: 'root'
@@ -16,16 +20,13 @@ export class DataService {
   constructor(private http: HttpClient) { }
 
   fetchOhlcHourRangeData(fromDate: Date, toDate: Date, symbol_id: number) {
-    console.log("fetchOhlcHourRangeData");
     const request_body = {
       "from_date": fromDate,
       "to_date": toDate,
       "symbol_id": symbol_id
     }
 
-    console.log(ohlcHourRange)
-
-    return this.http.post<Ohlc[]>(ohlcHourRange, request_body).pipe(
+    return this.http.post<Ohlc[]>(ohlcHourRangeUrl, request_body).pipe(
       map(data => data.map(item => ({
         bucket: new Date(item.bucket),
         open_price: parseFloat(item.open_price?.toString() ?? '0'),
@@ -39,17 +40,36 @@ export class DataService {
   }
 
   fetchOhlcPrediction(symbol_id: number, fromDate: Date) {
-    console.log("fetchOhlcPrediction");
     const request_body = {
       "symbol_id": symbol_id,
       "from_date": fromDate
     }
 
-    return this.http.post<Ohlc>(ohclHourPrediction, request_body).pipe(
+    return this.http.post<Ohlc>(ohclHourPredictionUrl, request_body).pipe(
       map(data => ({
         bucket: new Date(data.bucket),
         close_price: parseFloat(data.close_price.toString()),
       }))
+    );
+  }
+
+  fetchTrades(fromDate: Date, toDate: Date, symbol_id: number) {
+    console.log("fetchTrades");
+    const request_body = {  
+      "from_date": fromDate,
+      "to_date": toDate,
+      "symbol_id": symbol_id
+    }
+
+    return this.http.post<Trade[]>(tradesUrl, request_body).pipe(
+      map(dataArray => dataArray.map(data => ({
+        time: new Date(data.time),
+        price: parseFloat(data.price.toString()),
+        volume: parseFloat(data.volume.toString()),
+        side: data.side ?? '',
+        order_type: data.order_type ?? '',
+        symbol_id: data.symbol_id
+      })))
     );
   }
 

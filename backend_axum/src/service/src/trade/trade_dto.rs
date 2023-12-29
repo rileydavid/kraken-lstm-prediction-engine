@@ -9,8 +9,8 @@ pub struct TradeDto {
     time: DateTime<Utc>,
     price: f64,
     volume: f64,
-    side: String,
-    order_type: String,
+    side: String, // Optional? 
+    order_type: String, // Optional?
     symbol_id: i32,
 }
 
@@ -34,8 +34,8 @@ impl TradeDto {
     }
 }
 
-impl From<TradeModel> for TradeDto {
-    fn from(value: TradeModel) -> Self {
+impl From<&TradeModel> for TradeDto {
+    fn from(value: &TradeModel) -> Self {
         TradeDto::new(
             value.get_time().to_owned(),
             value.get_price().to_owned(),

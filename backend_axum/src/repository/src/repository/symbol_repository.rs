@@ -1,21 +1,19 @@
 use crate::domain::symbol::SymbolModel;
 use sqlx::postgres::PgRow;
-use sqlx::{Postgres, Transaction};
 use utils::error::generic_error::GenericError;
 use utils::error::repository_error::RepositoryError;
 
-//const QUERY_SELECT_SYMBOLS: &str = "SELECT id AS out_id, symbol AS out_symbol FROM symbols;";
-const QUERY_SELECT_SYMBOLS: &str = "SELECT * FROM symbols;";
+const QUERY_SELECT_SYMBOLS: &str = "SELECT * FROM symbol;";
 const QUERY_INSERT_SYMBOL_RETURNING_ID_SYMBOL: &str =
-    "SELECT * FROM insert_symbol($1);";
+    "SELECT out_id AS id, out_symbol AS symbol FROM insert_symbol($1);";
 
 pub async fn get_symbols(
-    tx: &mut Transaction<'static, Postgres>,
+    pool: &sqlx::PgPool,
 ) -> Result<Vec<SymbolModel>, GenericError> {
     // let connection = get_connection().await;
     match sqlx::query(QUERY_SELECT_SYMBOLS)
         .map(|row: PgRow| SymbolModel::from(row))
-        .fetch_all(&mut *tx)
+        .fetch_all(pool)
         .await
     {
         Ok(data) => Ok(data),
@@ -24,13 +22,13 @@ pub async fn get_symbols(
 }
 
 pub async fn insert_symbol(
-    tx: &mut Transaction<'static, Postgres>,
+    pool: &sqlx::PgPool,
     symbol: String,
 ) -> Result<SymbolModel, GenericError> {
     match sqlx::query(QUERY_INSERT_SYMBOL_RETURNING_ID_SYMBOL)
         .bind(symbol)
         .map(|row: PgRow| SymbolModel::from(row))
-        .fetch_one(&mut *tx)
+        .fetch_one(pool)
         .await
     {
         Ok(data) => Ok(data),
@@ -39,11 +37,12 @@ pub async fn insert_symbol(
 }
 
 pub async fn get_symbol_id(
-    tx: &mut Transaction<'static, Postgres>,
+    pool: &sqlx::PgPool,
     symbol: String,
 ) -> Result<i32, GenericError> {
-    match insert_symbol(tx, symbol).await {
+    match insert_symbol(pool, symbol).await {
         Ok(data) => Ok(data.get_id().to_owned()),
         Err(err) => Err(err),
     }
 }
+

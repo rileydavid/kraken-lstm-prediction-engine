@@ -3,30 +3,31 @@ CREATE DATABASE mlflow;
 
 -- https://www.timescale.com/blog/best-practices-for-picking-postgresql-data-types/
 -- https://stackoverflow.com/questions/20884405/is-there-a-performance-hit-using-decimal-data-types-mysql-postgres
+-- change from text to varchar(1)
 CREATE TABLE IF NOT EXISTS trade (
     time TIMESTAMPTZ NOT NULL,
     price DOUBLE PRECISION NOT NULL,  
     volume DOUBLE PRECISION NOT NULL, 
-    side TEXT,
-    order_type TEXT,
+    side VARCHAR(1),
+    order_type VARCHAR(1),
     symbol_id SERIAL NOT NULL
 );
 
--- TODO: create index for symbols and time? 
+-- index for better query performance (get_trades_range)
+CREATE INDEX idx_trade_symbol_id ON trade (time, symbol_id);
 
 -- hyper table
 SELECT create_hypertable('trade', 'time', migrate_data => true);
 
--- maybe change this use a singular name symbol
-CREATE TABLE IF NOT EXISTS symbols (
+CREATE TABLE IF NOT EXISTS symbol (
     id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL UNIQUE
 );
 
 -- index for symbols
-CREATE INDEX idx_symbols_symbol ON symbols (symbol);
+CREATE INDEX idx_symbol_symbol ON symbol (symbol);
 
-
+-- for inserting new symbols --> collector get's the id back to cache locally
 CREATE OR REPLACE FUNCTION insert_symbol(
     input_symbol text
 )
@@ -38,14 +39,14 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     -- Try to insert the new symbol
-    INSERT INTO symbols (symbol)
+    INSERT INTO symbol (symbol)
     VALUES (input_symbol)
     ON CONFLICT (symbol) DO NOTHING
     RETURNING id INTO out_id;
 
     -- If the insert did not happen, select the existing row
     IF NOT FOUND THEN
-        RETURN QUERY SELECT id, symbol FROM symbols WHERE symbol = input_symbol;
+        RETURN QUERY SELECT id, symbol FROM symbol WHERE symbol = input_symbol;
     ELSE
         out_symbol := input_symbol;
         RETURN NEXT;
@@ -53,37 +54,37 @@ BEGIN
 END;
 $$;
 
--- This seems inefficient --> might be better to keep a table of all symbols and their ids
--- in the backend
+
+-- replaced with updated version below (for better performance)
+-- CREATE OR REPLACE PROCEDURE insert_trade (
+--     _time TIMESTAMPTZ,
+--     _price DOUBLE PRECISION,  
+--     _volume DOUBLE PRECISION, 
+--     _side TEXT,
+--     _order_type TEXT,
+--     _symbol TEXT
+-- )
+-- LANGUAGE plpgsql    
+-- AS $$
+-- DECLARE symbol_result INTEGER;
+-- BEGIN
+--     SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
+-- 
+--     IF symbol_result IS NULL THEN
+--         INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
+--     END IF;
+-- 
+--     INSERT INTO trade (time, price, volume, side, order_type, symbol_id) 
+--     VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
+-- END;$$;
+
+-- insert trade --> used by the collector
 CREATE OR REPLACE PROCEDURE insert_trade (
     _time TIMESTAMPTZ,
     _price DOUBLE PRECISION,  
     _volume DOUBLE PRECISION, 
-    _side TEXT,
-    _order_type TEXT,
-    _symbol TEXT
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE symbol_result INTEGER;
-BEGIN
-    SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
-
-    IF symbol_result IS NULL THEN
-        INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
-    END IF;
-
-    INSERT INTO trade (time, price, volume, side, order_type, symbol_id) 
-    VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
-END;$$;
-
--- insert trade 
-CREATE OR REPLACE PROCEDURE insert_trade (
-    _time TIMESTAMPTZ,
-    _price DOUBLE PRECISION,  
-    _volume DOUBLE PRECISION, 
-    _side TEXT,
-    _order_type TEXT,
+    _side VARCHAR(1),
+    _order_type VARCHAR(1),
     _symbol_id INTEGER 
 )
 LANGUAGE plpgsql    
@@ -93,61 +94,42 @@ BEGIN
     VALUES (_time, _price, _volume, _side, _order_type, _symbol_id);
 END;$$;
 
-CREATE OR REPLACE FUNCTION get_trades (
-    input_interval INTEGER, -- in minutes
-    input_symbol TEXT -- all returns all symbols
+-- Example: SELECT * FROM get_trades_range('2023-01-01 00:00:00+00', '2023-12-31 23:59:59+00', 1);
+CREATE OR REPLACE FUNCTION get_trades_range (
+    input_from_date TIMESTAMPTZ,
+    input_to_date TIMESTAMPTZ,
+    input_symbol_id INTEGER 
 )
 RETURNS TABLE (
     time_ TIMESTAMPTZ,
     price DOUBLE PRECISION,
-    volume DOUBLE PRECISION, 
-    side TEXT,
-    order_type TEXT, 
-    symbol TEXT
+    volume DOUBLE PRECISION,
+    side VARCHAR(1),
+    order_type VARCHAR(1), 
+    symbol_id INTEGER
 )
 LANGUAGE plpgsql    
 AS $$
-DECLARE 
-symbol_id_result INTEGER;
-interval_duration INTERVAL; 
 BEGIN
-    interval_duration := input_interval * INTERVAL '1 minute';
-
-    IF input_symbol = 'all' THEN
-        RETURN QUERY SELECT 
-            trade.time,
-            trade.price,
-            trade.volume,
-            trade.side,
-            trade.order_type, 
-            _symbol.symbol AS symbol
-        FROM trade 
-        JOIN symbols AS _symbol ON trade.symbol_id = _symbol.id 
-        AND trade.time >= NOW() - interval_duration
-        ORDER BY trade.time; 
-    ELSE 
-        SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
-        
-        SELECT
-            trade.time,
-            trade.price,
-            trade.volume,
-            trade.side,
-            trade.order_type, 
-            _symbol.symbol AS symbol
-        FROM trade 
-        JOIN symbols AS _symbol ON trade.symbol_id = _symbol.id 
-        WHERE trade.symbol_id = symbol_id_result 
-        AND trade.time >= NOW() - interval_duration
-        ORDER BY trade.time; 
-    END IF;
+    RETURN QUERY
+    SELECT
+        trade.time,
+        trade.price,
+        trade.volume,
+        trade.side,
+        trade.order_type, 
+        trade.symbol_id
+    FROM trade 
+    WHERE trade.symbol_id = input_symbol_id 
+    AND trade.time >= input_from_date
+    AND input_to_date >= trade.time
+    ORDER BY trade.time; 
 END;$$;
 
--- Example: SELECT * FROM get_trades (15, 'ETHUSD');
-
 -- create ohlc (open, high, low, close) table for hour
+-- finalized=TRUE --> only data that is fully aggregated is returned (full hours only)
 CREATE MATERIALIZED VIEW ohlc_hour
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.create_group_indexes=TRUE, timescaledb.finalized=TRUE) AS
     SELECT
         time_bucket('1 hour', time) AS bucket,
         symbol_id,
@@ -160,81 +142,83 @@ WITH (timescaledb.continuous) AS
     FROM trade
 GROUP BY bucket, symbol_id; -- do i need the bucket here? TODO Test this? might improve performance
 
-CREATE INDEX ohlc_hour_idx ON ohlc_hour (symbol_id, bucket);
+-- index for better query performance (get_ohlc_hour_range)
+CREATE INDEX ohlc_hour_idx ON ohlc_hour (bucket, symbol_id);
 
+-- continuous aggregate policy to aggregate data from trades as time passes
 SELECT add_continuous_aggregate_policy('ohlc_hour',
     start_offset => INTERVAL '3 hour', 
     end_offset => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour');
 
-CREATE OR REPLACE FUNCTION get_ohlc_hour (
-    input_interval INTEGER, -- in days / all for all symbols
-    input_symbol_id INTEGER 
-)
-RETURNS TABLE (
-    bucket TIMESTAMPTZ,
-    open_price DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close_price DOUBLE PRECISION,
-    volume DOUBLE PRECISION,
-    count INTEGER,
-    symbol_id INTEGER
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE 
-interval_duration INTERVAL; 
-BEGIN
-    interval_duration := input_interval * INTERVAL '1 hour';
-    
-    RETURN QUERY SELECT 
-        ohlc_hour.bucket,
-        ohlc_hour.open_price,
-        ohlc_hour.high,
-        ohlc_hour.low,
-        ohlc_hour.close_price,
-        ohlc_hour.volume,
-        ohlc_hour.count,
-        ohlc_hour.symbol_id
-    FROM ohlc_hour
-    WHERE ohlc_hour.symbol_id = input_symbol_id
-    AND ohlc_hour.bucket >= NOW() - interval_duration
-    ORDER BY ohlc_hour.bucket; 
-END;$$;
+-- CREATE OR REPLACE FUNCTION get_ohlc_hour (
+--     input_interval INTEGER, -- in days / all for all symbols
+--     input_symbol_id INTEGER 
+-- )
+-- RETURNS TABLE (
+--     bucket TIMESTAMPTZ,
+--     open_price DOUBLE PRECISION,
+--     high DOUBLE PRECISION,
+--     low DOUBLE PRECISION,
+--     close_price DOUBLE PRECISION,
+--     volume DOUBLE PRECISION,
+--     count INTEGER,
+--     symbol_id INTEGER
+-- )
+-- LANGUAGE plpgsql    
+-- AS $$
+-- DECLARE 
+-- interval_duration INTERVAL; 
+-- BEGIN
+--     interval_duration := input_interval * INTERVAL '1 hour';
+--     
+--     RETURN QUERY SELECT 
+--         ohlc_hour.bucket,
+--         ohlc_hour.open_price,
+--         ohlc_hour.high,
+--         ohlc_hour.low,
+--         ohlc_hour.close_price,
+--         ohlc_hour.volume,
+--         ohlc_hour.count,
+--         ohlc_hour.symbol_id
+--     FROM ohlc_hour
+--     WHERE ohlc_hour.symbol_id = input_symbol_id
+--     AND ohlc_hour.bucket >= NOW() - interval_duration
+--     ORDER BY ohlc_hour.bucket; 
+-- END;$$;
 
 -- using id instead of text for symbol
-CREATE OR REPLACE FUNCTION get_ohlc_hour_start_date (
-    input_interval INTEGER, -- in days / all for all symbols
-    input_start_date TIMESTAMPTZ,
-    input_symbol_id INTEGER 
-)
-RETURNS TABLE (
-    bucket TIMESTAMPTZ,
-    close_price DOUBLE PRECISION,
-    volume DOUBLE PRECISION,
-    count INTEGER, 
-    symbol_id INTEGER
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE 
-interval_duration INTERVAL; 
-BEGIN
-    interval_duration := input_interval * INTERVAL '1 hour';
-    
-    RETURN QUERY SELECT 
-        ohlc_hour.bucket,
-        ohlc_hour.close_price,
-        ohlc_hour.volume,
-        ohlc_hour.count,
-        ohlc_hour.symbol_id
-    FROM ohlc_hour
-    WHERE ohlc_hour.symbol_id = input_symbol_id 
-    AND ohlc_hour.bucket >= input_start_date - interval_duration 
-    AND input_start_date >= ohlc_hour.bucket 
-    ORDER BY ohlc_hour.bucket; 
-END;$$;
+-- CREATE OR REPLACE FUNCTION get_ohlc_hour_start_date (
+--     input_interval INTEGER, -- in days / all for all symbols
+--     input_start_date TIMESTAMPTZ,
+--     input_symbol_id INTEGER 
+-- )
+-- RETURNS TABLE (
+--     bucket TIMESTAMPTZ,
+--     close_price DOUBLE PRECISION,
+--     volume DOUBLE PRECISION,
+--     count INTEGER, 
+--     symbol_id INTEGER
+-- )
+-- LANGUAGE plpgsql    
+-- AS $$
+-- DECLARE 
+-- interval_duration INTERVAL; 
+-- BEGIN
+--     interval_duration := input_interval * INTERVAL '1 hour';
+--     
+--     RETURN QUERY SELECT 
+--         ohlc_hour.bucket,
+--         ohlc_hour.close_price,
+--         ohlc_hour.volume,
+--         ohlc_hour.count,
+--         ohlc_hour.symbol_id
+--     FROM ohlc_hour
+--     WHERE ohlc_hour.symbol_id = input_symbol_id 
+--     AND ohlc_hour.bucket >= input_start_date - interval_duration 
+--     AND input_start_date >= ohlc_hour.bucket 
+--     ORDER BY ohlc_hour.bucket; 
+-- END;$$;
 
 CREATE OR REPLACE FUNCTION get_ohlc_hour_range (
     input_from_date TIMESTAMPTZ,
@@ -250,8 +234,6 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql    
 AS $$
-DECLARE 
-interval_duration INTERVAL; 
 BEGIN
     RETURN QUERY SELECT 
         ohlc_hour.bucket,
@@ -266,10 +248,10 @@ BEGIN
     ORDER BY ohlc_hour.bucket; 
 END;$$;
 
-
 -- create ohlc (open, high, low, close) table for day
+-- finalized=TRUE --> only data that is fully aggregated is returned (full days only)
 CREATE MATERIALIZED VIEW ohlc_day 
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.create_group_indexes=TRUE, timescaledb.finalized=TRUE) AS
     SELECT
         time_bucket('1 day', time) AS bucket,
         symbol_id,
@@ -282,53 +264,18 @@ WITH (timescaledb.continuous) AS
     FROM trade
 GROUP BY bucket, symbol_id;
 
+-- Not needed because the option timescaledb.create_group_indexes=TRUE is set
+-- CREATE INDEX ohlc_day_idx ON ohlc_day (bucket, symbol_id);
+
+-- continuous aggregate policy to aggregate data from trades as time passes
 SELECT add_continuous_aggregate_policy('ohlc_day',
     start_offset => INTERVAL '3 day',
     end_offset => INTERVAL '1 day',
     schedule_interval => INTERVAL '1 day');
 
--- using symbol_id
-CREATE OR REPLACE FUNCTION get_ohlc_day (
-    input_interval INTEGER, -- in days / all for all symbols
-    input_symbol_id INTEGER 
-)
-RETURNS TABLE (
-    bucket TIMESTAMPTZ,
-    open_price DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close_price DOUBLE PRECISION,
-    volume DOUBLE PRECISION,
-    count INTEGER,
-    symbol_id INTEGER
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE 
-interval_duration INTERVAL; 
-BEGIN
-    interval_duration := input_interval * INTERVAL '1 day';
-    
-    RETURN QUERY SELECT 
-        ohlc_day.bucket,
-        ohlc_day.open_price,
-        ohlc_day.high,
-        ohlc_day.low,
-        ohlc_day.close_price,
-        ohlc_day.volume,
-        ohlc_day.count,
-        ohlc_day.symbol_id
-    FROM ohlc_day
-    WHERE ohlc_day.symbol_id = input_symbol_id
-    AND ohlc_day.bucket >= NOW() - interval_duration
-    ORDER BY ohlc_day.bucket; 
-END;$$;
-
-
--- get ohlc using start date and symbol_id
-CREATE OR REPLACE FUNCTION get_ohlc_day_start_date (
-    input_interval INTEGER, -- in days / all for all symbols
-    input_start_date TIMESTAMPTZ,
+CREATE OR REPLACE FUNCTION get_ohlc_day_range (
+    input_from_date TIMESTAMPTZ,
+    input_to_date TIMESTAMPTZ,
     input_symbol_id INTEGER 
 )
 RETURNS TABLE (
@@ -340,11 +287,7 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql    
 AS $$
-DECLARE 
-interval_duration INTERVAL; 
 BEGIN
-    interval_duration := input_interval * INTERVAL '1 day';
-
     RETURN QUERY SELECT 
         ohlc_day.bucket,
         ohlc_day.close_price,
@@ -353,13 +296,83 @@ BEGIN
         ohlc_day.symbol_id
     FROM ohlc_day
     WHERE ohlc_day.symbol_id = input_symbol_id
-    AND ohlc_day.bucket >= input_start_date - interval_duration 
-    AND input_start_date >= ohlc_day.bucket 
+    AND ohlc_day.bucket >= input_from_date  
+    AND input_to_date >= ohlc_day.bucket 
     ORDER BY ohlc_day.bucket; 
 END;$$;
 
+-- using symbol_id
+-- CREATE OR REPLACE FUNCTION get_ohlc_day (
+--     input_interval INTEGER, -- in days / all for all symbols
+--     input_symbol_id INTEGER 
+-- )
+-- RETURNS TABLE (
+--     bucket TIMESTAMPTZ,
+--     open_price DOUBLE PRECISION,
+--     high DOUBLE PRECISION,
+--     low DOUBLE PRECISION,
+--     close_price DOUBLE PRECISION,
+--     volume DOUBLE PRECISION,
+--     count INTEGER,
+--     symbol_id INTEGER
+-- )
+-- LANGUAGE plpgsql    
+-- AS $$
+-- DECLARE 
+-- interval_duration INTERVAL; 
+-- BEGIN
+--     interval_duration := input_interval * INTERVAL '1 day';
+--     
+--     RETURN QUERY SELECT 
+--         ohlc_day.bucket,
+--         ohlc_day.open_price,
+--         ohlc_day.high,
+--         ohlc_day.low,
+--         ohlc_day.close_price,
+--         ohlc_day.volume,
+--         ohlc_day.count,
+--         ohlc_day.symbol_id
+--     FROM ohlc_day
+--     WHERE ohlc_day.symbol_id = input_symbol_id
+--     AND ohlc_day.bucket >= NOW() - interval_duration
+--     ORDER BY ohlc_day.bucket; 
+-- END;$$;
+
+-- get ohlc using start date and symbol_id
+-- CREATE OR REPLACE FUNCTION get_ohlc_day_start_date (
+--     input_interval INTEGER, -- in days / all for all symbols
+--     input_start_date TIMESTAMPTZ,
+--     input_symbol_id INTEGER 
+-- )
+-- RETURNS TABLE (
+--     bucket TIMESTAMPTZ,
+--     close_price DOUBLE PRECISION,
+--     volume DOUBLE PRECISION,
+--     count INTEGER, 
+--     symbol_id INTEGER
+-- )
+-- LANGUAGE plpgsql    
+-- AS $$
+-- DECLARE 
+-- interval_duration INTERVAL; 
+-- BEGIN
+--     interval_duration := input_interval * INTERVAL '1 day';
+-- 
+--     RETURN QUERY SELECT 
+--         ohlc_day.bucket,
+--         ohlc_day.close_price,
+--         ohlc_day.volume,
+--         ohlc_day.count,
+--         ohlc_day.symbol_id
+--     FROM ohlc_day
+--     WHERE ohlc_day.symbol_id = input_symbol_id
+--     AND ohlc_day.bucket >= input_start_date - interval_duration 
+--     AND input_start_date >= ohlc_day.bucket 
+--     ORDER BY ohlc_day.bucket; 
+-- END;$$;
+-- 
 -- model config for easy swapping of models
-CREATE TABLE model_configs (
+CREATE TABLE model_config (
     id SERIAL PRIMARY KEY,
     symbol_id SERIAL NOT NULL,
     modelname TEXT,
@@ -373,49 +386,8 @@ CREATE TABLE model_configs (
 );
 
 -- there should only be one activ model for each currency/pair
-ALTER TABLE model_configs ADD CONSTRAINT model_configs_constraint
+ALTER TABLE model_config ADD CONSTRAINT model_config_constraint
 UNIQUE (symbol_id, active);
-
-
-CREATE OR REPLACE FUNCTION get_model_config (
-    input_symbol TEXT 
-)
-RETURNS TABLE (
-    id INTEGER,
-    symbol TEXT,
-    modelname TEXT,
-    data_type TEXT,
-    lookback INTEGER,
-    lags INTEGER[],
-    window_sizes INTEGER[],
-    span_sizes INTEGER[],
-    active BOOLEAN,
-    features TEXT[]
-)
-LANGUAGE plpgsql    
-AS $$
-DECLARE 
-symbol_id_result INTEGER;
-BEGIN
-    SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
-
-    RETURN QUERY SELECT 
-        model_configs.id,
-        _symbol.symbol AS symbol,
-        model_configs.modelname,
-        model_configs.data_type,
-        model_configs.lookback,
-        model_configs.lags,
-        model_configs.window_sizes,
-        model_configs.span_sizes,
-        model_configs.active,
-        model_configs.features
-    FROM model_configs
-    JOIN symbols AS _symbol ON model_configs.symbol_id = _symbol.id 
-    WHERE model_configs.symbol_id = symbol_id_result 
-    AND model_configs.active IS TRUE;
-END;$$;
-
 
 CREATE OR REPLACE FUNCTION get_model_config (
     input_symbol_id INTEGER 
@@ -436,23 +408,33 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY SELECT 
-        model_configs.id,
-        model_configs.symbol_id,
-        model_configs.modelname,
-        model_configs.data_type,
-        model_configs.lookback,
-        model_configs.lags,
-        model_configs.window_sizes,
-        model_configs.span_sizes,
-        model_configs.active,
-        model_configs.features
-    FROM model_configs
-    WHERE model_configs.symbol_id = input_symbol_id 
-    AND model_configs.active IS TRUE;
+        model_config.id,
+        model_config.symbol_id,
+        model_config.modelname,
+        model_config.data_type,
+        model_config.lookback,
+        model_config.lags,
+        model_config.window_sizes,
+        model_config.span_sizes,
+        model_config.active,
+        model_config.features
+    FROM model_config
+    WHERE model_config.symbol_id = input_symbol_id 
+    AND model_config.active IS TRUE;
 END;$$;
 
+SELECT * FROM insert_symbol('ETHUSD');
 
+INSERT INTO model_config 
+(symbol_id, modelname, data_type, lookback, lags, window_sizes, span_sizes, active, features) 
+VALUES 
+(1, 'model.pkl', 'np.float32', 16, ARRAY[12, 168], ARRAY[]::INTEGER[], ARRAY[6, 12], true, 
+ARRAY['is_holiday', 'close_price', 'volume', 'is_weekend', 'count', 'hour_cos', 'hour_sin', 
+'day_of_week_cos', 'day_of_week_sin', 'month_cos', 'month_sin', 'day_of_month_sin', 
+'day_of_month_cos', 'year_normalized', 'close_lag12', 'close_lag168', 'ema_6_close_price', 
+'ema_12_close_price']::TEXT[]);
 
+-- currently not in use
 -- Prediction Data
 CREATE TABLE IF NOT EXISTS kraken_prediction (
     time TIMESTAMPTZ NOT NULL,
@@ -477,11 +459,11 @@ DECLARE
 symbol_result INTEGER;
 model_result INTEGER;
 BEGIN
-    SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
+    SELECT id INTO symbol_result FROM symbol WHERE symbol = _symbol;
     SELECT id INTO model_result FROM models WHERE model_name = _model_name;
 
     IF symbol_result IS NULL THEN
-        INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
+        INSERT INTO symbol (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
     END IF;
 
     IF model_result IS NULL THEN
@@ -514,7 +496,7 @@ interval_duration INTERVAL;
 BEGIN
     interval_duration := input_interval * INTERVAL '1 hour';
 
-    SELECT id INTO symbol_id_result FROM symbols WHERE symbols.symbol = input_symbol;
+    SELECT id INTO symbol_id_result FROM symbol WHERE symbol.symbol = input_symbol;
     SELECT id INTO model_id_result FROM models WHERE models.model_name = input_model;
 
     RETURN QUERY SELECT 

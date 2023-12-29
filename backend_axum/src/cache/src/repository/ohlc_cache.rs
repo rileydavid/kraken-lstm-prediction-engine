@@ -1,46 +1,34 @@
-use core::time;
-use std::{collections::HashMap, sync::Arc, time::SystemTime};
+use bigdecimal::FromPrimitive;
+use chrono::{DateTime, Utc};
+use repository::domain::ohlc::OhlcModel;
+use std::{collections::HashMap, sync::Arc};
 
-use bigdecimal::{FromPrimitive, BigDecimal};
-use chrono::{DateTime, Timelike, Utc, TimeZone, Date};
-
-
-use repository::domain::{ohlc::{self, OhlcModel}, symbol};
 use rustis::{
     client::Client,
     commands::{
-        GenericCommands, StringCommands, TimeSeriesCommands, TsAddOptions, TsCreateOptions,
-        TsDuplicatePolicy, TsGetOptions, TsGroupByOptions, TsMRangeOptions, TsRangeOptions,
-        TsRangeSample,
+        TimeSeriesCommands, TsAddOptions, TsCreateOptions, TsDuplicatePolicy, TsGetOptions,
+        TsRangeOptions,
     },
-    resp::CollectionResponse,
 };
 
-use utils::{
-    core::cache,
-    error::{
-        generic_error::{ErrorBody, GenericError},
-        webserver_error::WebError,
-    },
-};
+use utils::error::{generic_error::GenericError, webserver_error::WebError};
 
 use tracing::error;
 use tracing::info;
 
-use crate::domain::ohlc::{OhlcCacheDto, OhlcKeyDto, timestamp_to_datetime};
+use crate::domain::ohlc::{timestamp_to_datetime, OhlcCacheDto, OhlcKeyDto};
 
-// switch all tables to use double precision 
+// switch all tables to use double precision
 // --> better for timescale db (contious aggregates)
 // --> no conversion needed for redis
 
 // Issue how manage the cache?
 // --> need to know when to update the cache
 
-// no issue when getting certain date range (in the past) --> just make sure there is a timestamp each hour 
+// no issue when getting certain date range (in the past) --> just make sure there is a timestamp each hour
 // getting fromDate to current time is problematic as the current value is still being updated constantly
 
-
-// 
+//
 // idea check if values are in cache by checking these two keys
 // key, value --> ohlc:window_end:1, end_timestamp
 // key, value --> ohlc:window_start:1, start_timestamp
@@ -78,7 +66,6 @@ const HIGH: &str = "high";
 const LOW: &str = "low";
 const VOLUME: &str = "volume";
 const COUNT: &str = "count";
-
 
 fn get_default_ts_create_options_ohlc() -> TsCreateOptions {
     TsCreateOptions::default()
@@ -120,7 +107,7 @@ pub async fn has_ts(client: &Arc<Client>, symbol_id: i32) -> bool {
     info!("Checking if symbol {} has time series", symbol_id);
 
     let key = "ohlc:close_price".to_owned() + ":" + &symbol_id.to_string();
-    
+
     match client.ts_get(&key, TsGetOptions::default()).await {
         Ok(_) => {
             info!("Symbol already exists in the cache");
@@ -130,16 +117,13 @@ pub async fn has_ts(client: &Arc<Client>, symbol_id: i32) -> bool {
     }
 }
 
-pub async fn insert_ohlc(
-    client: &Arc<Client>,
-    data: Vec<OhlcModel>,
-) -> Result<(), GenericError> {
+pub async fn insert_ohlc(client: &Arc<Client>, data: Vec<OhlcModel>) -> Result<(), GenericError> {
     info!("Inserting ohlc data into cache");
 
     let data_converted: Vec<OhlcCacheDto> = data
-    .into_iter()
-    .map(|model: repository::domain::ohlc::OhlcModel| OhlcCacheDto::from(model))
-    .collect();
+        .into_iter()
+        .map(|model: repository::domain::ohlc::OhlcModel| OhlcCacheDto::from(model))
+        .collect();
 
     for ohlc in data_converted {
         let timestamp = ohlc.get_timestamp();
@@ -187,14 +171,24 @@ async fn insert_ohlc_key(
     }
 }
 
-pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime<Utc>, end_date: DateTime<Utc>, interval: i32) -> Result<Vec<OhlcModel>, GenericError> {
-
+pub async fn get_ohlc(
+    client: &Arc<Client>,
+    symbol_id: i32,
+    start_date: DateTime<Utc>,
+    end_date: DateTime<Utc>,
+    interval: i32,
+) -> Result<Vec<OhlcModel>, GenericError> {
     let mut master_map: HashMap<String, HashMap<u64, f64>> = HashMap::new();
 
     for label in LABELS_OHLC.iter() {
         let key = "ohlc:".to_owned() + label + ":" + &symbol_id.to_string();
         let result: Result<Vec<(u64, f64)>, rustis::Error> = client
-            .ts_range(key, start_date.timestamp()-1, end_date.timestamp()+1, TsRangeOptions::default())
+            .ts_range(
+                key,
+                start_date.timestamp() - 1,
+                end_date.timestamp() + 1,
+                TsRangeOptions::default(),
+            )
             .await;
 
         match result {
@@ -235,7 +229,8 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
             let volume = master_map
                 .get(VOLUME)
                 .and_then(|m| m.get(key))
-                .and_then(|v| FromPrimitive::from_f64(*v)).unwrap();
+                .and_then(|v| FromPrimitive::from_f64(*v))
+                .unwrap();
 
             let count = master_map
                 .get(COUNT)
@@ -252,7 +247,7 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
                 close_price,
                 volume,
                 count.unwrap_or_default(),
-                symbol_id
+                symbol_id,
             );
             result.push(ohlc_dto);
         }
@@ -260,247 +255,27 @@ pub async fn get_ohlc(client: &Arc<Client>, symbol_id: i32, start_date: DateTime
 
     //TODO: make sure this logic is also correct for get_ohlc_hour without the fixed start_date
     // data might not be correct because the latest timestamp is still being aggregated
-    if result.len() != (interval+1) as usize {
+    if result.len() != (interval + 1) as usize {
         info!("result len {}", result.len());
         info!("interval {}", interval);
         error!("Failed to get ohlc data from cache: not enough data");
-        return Err(WebError::general_error("Failed to get ohlc data from cache: not enough data".to_string()));
+        return Err(WebError::general_error(
+            "Failed to get ohlc data from cache: not enough data".to_string(),
+        ));
     }
 
     Ok(result)
 }
 
-
-// TOOD: make use of this 
-fn get_value_from_map(master_map: &HashMap<String, HashMap<String, f64>>, key: &str, value_key: &str) -> Option<f64> {
+// TOOD: make use of this
+#[allow(dead_code)]
+fn get_value_from_map(
+    master_map: &HashMap<String, HashMap<String, f64>>,
+    key: &str,
+    value_key: &str,
+) -> Option<f64> {
     master_map
         .get(value_key)
         .and_then(|m| m.get(key))
         .and_then(|v| FromPrimitive::from_f64(*v))
 }
-
-
-// accurate to the second --> enough for ohlc hour/day/min
-/*
-fn timestamp_to_datetime(timestamp: i64) -> DateTime<Utc> {
-    let datetime: DateTime<Utc> = Utc.timestamp_opt(timestamp, 0).unwrap();
-    datetime
-}
- */
-
-
-
-/*
-        match result {
-            Ok(_) => return Ok(()),
-            Err(err) => {
-                error!("Failed to create time series")
-                Err(WebError::general_error(err.to_string()))
-            }
-        }
-*/
-
-/*
-pub async fn is_cached(client: &Arc<Client>, symbol_id: i32, interval: i32) -> bool {
-    // TODO: Test this!
-    let now = SystemTime::now();
-    let datetime: DateTime<Utc> = now.into();
-    let datetime = datetime
-        .with_minute(0)
-        .unwrap()
-        .with_second(0)
-        .unwrap()
-        .with_nanosecond(0)
-        .unwrap();
-    let window_end = datetime.timestamp();
-    let window_start = window_end - ((interval as i64) * 60);
-
-    let key_end = "ohlc:window_end:".to_owned() + &symbol_id.to_string();
-    let key_start = "ohlc:window_start:".to_owned() + &symbol_id.to_string();
-
-    let result_end: Option<String> = client.get(&key_end).await.unwrap();
-    let result_start: Option<String> = client.get(&key_start).await.unwrap();
-
-    if result_end.is_some() && result_start.is_some() {
-        let end_timestamp = result_end.unwrap().parse::<i64>().unwrap();
-        let start_timestamp = result_start.unwrap().parse::<i64>().unwrap();
-
-        return end_timestamp == window_end && start_timestamp == window_start;
-    }
-
-    return false;
-}
-
-pub async fn update_cached_flag(
-    client: &Arc<Client>,
-    symbol_id: i32,
-    window_start: i64,
-    window_end: i64,
-) -> Result<(), GenericError> {
-    let key_end = "ohlc:window_end:".to_owned() + &symbol_id.to_string();
-    let key_start = "ohlc:window_start:".to_owned() + &symbol_id.to_string();
-
-    let result_end = client.set(&key_end, window_end).await;
-    let result_start = client.set(&key_start, window_start).await;
-
-    if result_end.is_err() || result_start.is_err() {
-        return Err(WebError::general_error(
-            "Failed to update cache flag".to_owned(),
-        ));
-    }
-
-    Ok(())
-}
-
-pub async fn update(client: &Arc<Client>, value: Vec<CacheOhlcDto>) -> Result<(), GenericError> {
-    for ohlc_dto in value {
-        let timestamp = ohlc_dto.get_timestamp();
-        let cache_key_dtos = ohlc_dto.get_cachekeydtos();
-
-        for cache_key_dto in cache_key_dtos {
-            let result = add(client.clone(), cache_key_dto, timestamp.clone()).await;
-            match result {
-                Ok(_) => {}
-                Err(err) => {
-                    return Err(err);
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
-pub async fn get_start_date(
-    client: &Arc<Client>,
-    symbol_id: i32,
-    interval: i32,
-    start_date: DateTime<Utc>,
-) -> Result<f64, GenericError> {
-    let ts_mrange_option: TsMRangeOptions = TsMRangeOptions::default();
-    let ts_group_by_option: TsGroupByOptions = TsGroupByOptions::default();
-
-    let start_unix = start_date.timestamp();
-    let end_unix: i64 = start_date.timestamp() + ((interval as i64) * 60);
-
-    let filters: Vec<String> = vec!["close_price=close_price".to_owned()];
-
-    let result: Vec<TsRangeSample> = client
-        .ts_mrange(
-            start_unix,
-            end_unix,
-            ts_mrange_option,
-            filters,
-            ts_group_by_option,
-        )
-        .await
-        .unwrap();
-
-    info!("result {:?}", result);
-
-    Ok(0.0)
-}
-
-pub async fn get_interval(
-    client: &Arc<Client>,
-    symbol_id: i32,
-    interval: i32,
-) -> Result<f64, GenericError> {
-    let ts_get_option: TsGetOptions = TsGetOptions::default();
-    let result: Option<(u64, f64)> = client
-        .ts_get("ohlc:close_price:1", ts_get_option)
-        .await
-        .unwrap();
-
-    match result {
-        Some(data) => {
-            info!("Successfully retrieved close price");
-            Ok(data.1)
-        }
-        None => {
-            info!("Failed to retrieve close price");
-            Err(WebError::general_error(
-                "Failed to retrieve close price".to_owned(),
-            ))
-        }
-    }
-}
-
-pub async fn create_ts(client: Arc<Client>) -> Result<(), GenericError> {
-    let mut ts_create_option =
-        TsCreateOptions::default().duplicate_policy(TsDuplicatePolicy::First);
-    ts_create_option = ts_create_option.labels(vec![("type".to_owned(), "close_price".to_owned())]);
-
-    let result = client.ts_create("ohlc:1 ", ts_create_option).await.unwrap();
-
-    Ok(())
-}
-
-async fn add(client: Arc<Client>, value: &CacheKeyDto, timestamp: i64) -> Result<(), GenericError> {
-    let mut ts_add_option = TsAddOptions::default();
-
-    //let labels: Vec<(String, String)> = vec![("close_price".to_owned(), "close_price".to_owned())];
-    //ts_add_option = ts_add_option.labels(labels);
-    //ts_add_option = ts_add_option.on_duplicate(TsDuplicatePolicy::First);
-
-    info!("key {}", value.get_key());
-
-    let result = client
-        .ts_add(
-            value.get_key(),
-            timestamp,
-            value.get_value().to_owned(),
-            ts_add_option,
-        )
-        .await;
-
-    match result {
-        Ok(_) => {
-            info!("Successfully updated close price");
-            Ok(())
-        }
-        Err(err) => {
-            info!("Failed to update close price");
-            Err(WebError::general_error(err.to_string()))
-        }
-    }
-}
-
-
-async fn madd(client: Arc<Client>, value: Vec<CacheOhlcDto>) -> Result<(), GenericError> {
-
-    // what i need is tuples of (key timestamp, value)
-    Ok(())
-}
-
-async fn add_updated(client: Arc<Client>, value: &CacheKeyDto, timestamp: i64, ohlc_type: OhlcType) -> Result<(), GenericError> {
-    let mut ts_add_option = TsAddOptions::default()
-        .on_duplicate(TsDuplicatePolicy::First)
-        .labels(vec![("type".to_owned(), ohlc_type.as_str().to_owned())]);
-
-    //let labels: Vec<(String, String)> = vec![("close_price".to_owned(), "close_price".to_owned())];
-    //ts_add_option = ts_add_option.labels(labels);
-    //ts_add_option = ts_add_option.on_duplicate(TsDuplicatePolicy::First);
-
-    info!("key {}", value.get_key());
-
-    let result = client
-        .ts_add(
-            value.get_key(),
-            timestamp,
-            value.get_value().to_owned(),
-            ts_add_option,
-        )
-        .await;
-
-    match result {
-        Ok(_) => {
-            info!("Successfully updated close price");
-            Ok(())
-        }
-        Err(err) => {
-            info!("Failed to update close price");
-            Err(WebError::general_error(err.to_string()))
-        }
-    }
-}
- */

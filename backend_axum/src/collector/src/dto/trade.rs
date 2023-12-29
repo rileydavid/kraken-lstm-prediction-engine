@@ -1,10 +1,8 @@
-use std::str::FromStr;
-
+use crate::utils::timestamp::parse_timestamp;
 use chrono::{DateTime, Utc};
 use repository::domain::trade::TradeModel;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::utils::timestamp::parse_timestamp;
 
 #[derive(Serialize, sqlx::FromRow, Deserialize, Debug, Clone)]
 pub struct Trade {
@@ -15,7 +13,7 @@ pub struct Trade {
     side: String,
     order_type: String,
     symbol: String,
-    symbol_id: Option<i32>
+    symbol_id: Option<i32>,
 }
 
 impl Trade {
@@ -63,7 +61,7 @@ impl Trade {
             side,
             order_type,
             symbol,
-            symbol_id: None
+            symbol_id: None,
         }
     }
 
@@ -84,8 +82,20 @@ impl Trade {
                     let trade_array = array.as_array().unwrap();
                     trades.push(Trade::new(
                         parse_timestamp(trade_array.get(2).unwrap().as_str().unwrap()),
-                        trade_array.get(0).unwrap().as_str().unwrap().parse::<f64>().unwrap(),
-                        trade_array.get(1).unwrap().as_str().unwrap().parse::<f64>().unwrap(),
+                        trade_array
+                            .get(0)
+                            .unwrap()
+                            .as_str()
+                            .unwrap()
+                            .parse::<f64>()
+                            .unwrap(),
+                        trade_array
+                            .get(1)
+                            .unwrap()
+                            .as_str()
+                            .unwrap()
+                            .parse::<f64>()
+                            .unwrap(),
                         trade_array.get(3).unwrap().as_str().unwrap().to_string(),
                         trade_array.get(4).unwrap().as_str().unwrap().to_string(),
                         symbol.to_string(),

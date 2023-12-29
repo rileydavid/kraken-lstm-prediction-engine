@@ -12,7 +12,7 @@ WORKDIR /backend
 
 COPY ./ .
 
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cargo build --target x86_64-unknown-linux-musl --release --jobs 4
 
 ####################################################################################################
 ## Final image

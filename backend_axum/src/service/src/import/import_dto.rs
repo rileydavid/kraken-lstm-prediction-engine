@@ -19,8 +19,8 @@ impl ImportDto {
     }
 }
 
-impl From<ImportModel> for ImportDto {
-    fn from(value: ImportModel) -> Self {
+impl From<&ImportModel> for ImportDto {
+    fn from(value: &ImportModel) -> Self {
         ImportDto::new(
             value.get_file_name().to_owned(),
             value.get_symbol().to_owned(),
@@ -28,11 +28,11 @@ impl From<ImportModel> for ImportDto {
     }
 }
 
-impl From<ImportDto> for ImportModel {
-    fn from(value: ImportDto) -> Self {
+impl From<&ImportDto> for ImportModel {
+    fn from(value: &ImportDto) -> Self {
         ImportModel::new(
-            value.file_name,
-            value.symbol,
+            value.file_name.to_owned(),
+            value.symbol.to_owned(),
         )
     }
 }

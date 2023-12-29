@@ -1,4 +1,3 @@
-use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use repository::domain::model_config::ModelConfigModel;
 use serde::{Deserialize, Serialize};
@@ -85,11 +84,11 @@ impl From<ModelConfigModel> for PredictionRequestDto {
 #[derive(Serialize, Deserialize)]
 pub struct PredictionResponseDto {
     bucket: DateTime<Utc>,
-    close_price: BigDecimal,
+    close_price: f64,
 }
 
 impl PredictionResponseDto {
-    pub fn new(bucket: DateTime<Utc>, close_price: BigDecimal) -> Self {
+    pub fn new(bucket: DateTime<Utc>, close_price: f64) -> Self {
         PredictionResponseDto { bucket, close_price }
     }
 }

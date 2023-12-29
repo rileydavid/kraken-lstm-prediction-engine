@@ -1,5 +1,4 @@
 
-use cache::domain::ohlc::{OhlcCacheDto, OhlcLabel, timestamp_to_datetime};
 use chrono::{DateTime, Utc};
 use repository::domain::ohlc::OhlcModel;
 use serde::{Deserialize, Serialize};
@@ -44,8 +43,8 @@ impl OhlcDto {
 }
 
 
-impl From<OhlcModel> for OhlcDto {
-    fn from(value: OhlcModel) -> Self {
+impl From<&OhlcModel> for OhlcDto {
+    fn from(value: &OhlcModel) -> Self {
         OhlcDto::new(
             value.get_bucket().to_owned(),
             value.get_open_price().to_owned(),
@@ -59,8 +58,8 @@ impl From<OhlcModel> for OhlcDto {
     }
 }
 
-impl From<OhlcDto> for OhlcModel {
-    fn from(value: OhlcDto) -> Self {
+impl From<&OhlcDto> for OhlcModel {
+    fn from(value: &OhlcDto) -> Self {
         OhlcModel::new(
             value.bucket,
             value.open_price,
@@ -74,6 +73,7 @@ impl From<OhlcDto> for OhlcModel {
     }
 }
 
+/*
 impl From<OhlcCacheDto> for OhlcDto {
     fn from(cache: OhlcCacheDto) -> Self {
         let mut open_price = None;
@@ -106,3 +106,4 @@ impl From<OhlcCacheDto> for OhlcDto {
         )
     }
 }
+*/

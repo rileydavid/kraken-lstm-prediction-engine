@@ -9,11 +9,13 @@ repository = { path = "../repository" }
 cache = { path = "../cache" }
 
 serde = "1.0.152"
-bigdecimal = {version = "0.3.1", features = ["serde"]} # sqlx compatible
 chrono = {version = "0.4.31",features = ["serde"]}
 tracing = "0.1.37"
 openssl = { version = "0.10", features = ["vendored"] }
 reqwest = { version = "0.11", features = ["json"] }
+rayon = "1.8.0"
+
 
 redis = "0.24.0"
 rustis = {version = "0.12.4", features = ["redis-stack", "pool"]} 
+sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }

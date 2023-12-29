@@ -10,6 +10,8 @@ use tungstenite::{
     connect, handshake::client::Response, stream::MaybeTlsStream, Message, WebSocket,
 };
 
+//todo put trade in it's own file 
+
 #[allow(dead_code)]
 struct Trade {
     channel_id: i32,

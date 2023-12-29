@@ -1,13 +1,29 @@
-use service::trade::trade_service;
 use crate::utils::error::prepare_response;
 use crate::utils::error::ResponseError;
-use axum::extract::Path;
 use axum::Json;
+use axum::extract::State;
 use service::trade::trade_dto::TradeDto;
+use service::trade::trade_service;
+use sqlx::PgPool;
+use tracing::info;
 
-pub async fn get_trade_symbol_interval(
-    Path(input): Path<(String, i32)>,
+use super::dto::TradeRequestDto;
+
+pub async fn get_trades_range(
+    State(pool): State<PgPool>,
+    Json(payload): Json<TradeRequestDto>,
 ) -> Result<Json<Vec<TradeDto>>, ResponseError> {
-    let result = trade_service::get_trades_by_symbol_interval(input.0, input.1).await;
+    info!(
+        "Incoming Request: get_trades_range - from {:?}, to {:?}",
+        payload.from_date, payload.to_date,
+    );
+
+    let result = trade_service::get_trades_range(
+        &pool,
+        payload.symbol_id,
+        payload.from_date,
+        payload.to_date,
+    )
+    .await;
     prepare_response(result)
 }

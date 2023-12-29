@@ -3,9 +3,8 @@ use dotenv::dotenv;
 use tracing::info;
 use utils::core::logger;
 use webserver;
-use utils::core::cache;
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::main(flavor = "multi_thread", worker_threads = 6)]
 async fn main() -> Result<(), ()> {
     dotenv().ok();
     logger::run().await;

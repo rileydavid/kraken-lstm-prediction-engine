@@ -1,7 +1,6 @@
-use bigdecimal::BigDecimal;
 use chrono::{Utc, DateTime, TimeZone};
 use repository::domain::ohlc::OhlcModel;
-use bigdecimal::{ToPrimitive, FromPrimitive};
+use bigdecimal::ToPrimitive;
 
 #[derive(Clone, Copy)]
 pub enum OhlcLabel {
@@ -30,7 +29,6 @@ pub struct OhlcKeyDto {
     key: String, // ohlc:close_price:symbol_id
     value: f64, // value but some are just integer (count)
     label: OhlcLabel
-    //ohlc_type: OhlcType // used for the key
 }
 
 impl OhlcKeyDto { 
@@ -115,124 +113,6 @@ impl From<OhlcModel> for OhlcCacheDto {
         )
     }
 }
-
-
-
-
-// TODO: issue with ohlc --> hour and day both have one timestamp that matches up?
-// seperation of ohlc and ohlc_hour/ohlc_day
-/* 
-pub struct CacheOhlcDto {
-    timestamp: i64,
-    keys: Vec<OhlcKeyDto>,
-    //close_price: CacheKeyDto,
-    //open_price: CacheKeyDto,
-    //high: CacheKeyDto,
-    //low: CacheKeyDto,
-    //volume: CacheKeyDto, 
-    //count: CacheKeyDto,
-    symbol_id: i32,
-}
-
-
-impl CacheOhlcDto {
-    pub fn new(
-        timestamp: i64,
-        close_price: BigDecimal,
-        open_price: BigDecimal,
-        high: BigDecimal,
-        low: BigDecimal,
-        volume: BigDecimal,
-        count: i32,
-        symbol_id: i32, // used for the key
-        //ohlc_type: OhlcType,
-    ) -> Self {
-        CacheOhlcDto {
-            timestamp: timestamp,
-            close_price: CacheKeyDto::new(format!("ohlc:close_price:{}", symbol_id), close_price.to_f64().unwrap()),
-            open_price: CacheKeyDto::new(format!("ohlc:open_price:{}", symbol_id), open_price.to_f64().unwrap()),
-            high: CacheKeyDto::new(format!("ohlc:high:{}", symbol_id), high.to_f64().unwrap()),
-            low: CacheKeyDto::new(format!("ohlc:low:{}", symbol_id), low.to_f64().unwrap()),
-            volume: CacheKeyDto::new(format!("ohlc:volume:{}", symbol_id), volume.to_f64().unwrap()),
-            count: CacheKeyDto::new(format!("ohlc:count:{}", symbol_id), count as f64),
-            symbol_id: symbol_id,
-        }
-    }
-
-    pub fn get_timestamp(&self) -> &i64 {
-        &self.timestamp
-    }
-
-    // create getters for each key
-    pub fn get_close_price(&self) -> &CacheKeyDto {
-        &self.close_price
-    }
-
-    pub fn get_open_price(&self) -> &CacheKeyDto {
-        &self.open_price
-    }
-
-    pub fn get_high(&self) -> &CacheKeyDto {
-        &self.high
-    }
-
-    pub fn get_low(&self) -> &CacheKeyDto {
-        &self.low
-    }
-
-    pub fn get_volume(&self) -> &CacheKeyDto {
-        &self.volume
-    }
-
-    pub fn get_count(&self) -> &CacheKeyDto {
-        &self.count
-    }
-
-    pub fn get_cachekeydtos(&self) -> Vec<&CacheKeyDto> {
-        let mut result: Vec<&CacheKeyDto> = Vec::new();
-
-        result.push(&self.close_price);
-        result.push(&self.open_price);
-        result.push(&self.high);
-        result.push(&self.low);
-        result.push(&self.volume);
-        result.push(&self.count);
-            
-        result
-    }
-}
-
-impl From<OhlcModel> for CacheOhlcDto {
-    fn from(value: OhlcModel) -> Self {
-        CacheOhlcDto::new(
-            datetime_to_timestamp(value.get_bucket().to_owned()),
-            value.get_close_price().to_owned(),
-            value.get_open_price().to_owned().unwrap(),
-            value.get_high().to_owned().unwrap(),
-            value.get_low().to_owned().unwrap(),
-            value.get_volume().to_owned(),
-            value.get_count().to_owned(),
-            value.get_symbol_id().to_owned(),
-        )
-    }
-}
-
-impl From<CacheOhlcDto> for OhlcDto {
-    fn from(value: CacheOhlcDto) -> Self {
-        OhlcDto::new(
-            timestamp_to_datetime(value.timestamp),
-            Some(FromPrimitive::from_f64(value.open_price.value).unwrap()),
-            Some(FromPrimitive::from_f64(value.high.value).unwrap()),
-            Some(FromPrimitive::from_f64(value.low.value).unwrap()),
-            FromPrimitive::from_f64(value.close_price.value).unwrap(),
-            FromPrimitive::from_f64(value.volume.value).unwrap(),
-            value.count.value as i32,
-            value.symbol_id, 
-        )
-    }
-}
- */
-
 
 // accurate to the second --> enough for ohlc hour/day/min
 pub fn timestamp_to_datetime(timestamp: i64) -> DateTime<Utc> {
