@@ -4,9 +4,11 @@ import { map } from 'rxjs';
 import { Ohlc } from '../models/ohlc.model';
 import { SymbolModel } from '../models/symbol.model';
 import { Trade } from '../models/trade.model';
+import { environment } from '../../environments/environments';
 
-const baseUrl = 'http://172.1.0.14:8000';
+//const baseUrl = 'http://172.1.0.14:8000';
 //const baseUrl = 'http://127.0.0.1:8000';
+const baseUrl = environment.apiUrl;
 
 const ohlcHourRangeUrl = `${baseUrl}/ohlc/hour/range`;
 const ohclHourPredictionUrl = `${baseUrl}/execute/model`;
@@ -74,6 +76,9 @@ export class DataService {
   }
 
   fetchSymbols() {
+    console.log("is prod? ", environment.production);
+    console.log(baseUrl);
+
     return this.http.get<SymbolModel[]>(baseUrl + "/symbols").pipe(
       map(data => data.map(item => ({
         id: parseInt(item.id.toString()),

@@ -29,6 +29,11 @@ pub async fn import_file(
                         IMPORT_TIMESCALE.to_owned() + "converted.csv".into(),
                     )
                     .await;
+                    
+                    // clean up files
+                    let _ = fs::remove_file(IMPORT.to_owned() + "converted.csv");
+                    let _ = fs::remove_file(IMPORT.to_owned() + file_name.as_str());
+
                     result
                 }
                 Err(err) => return Err(err),

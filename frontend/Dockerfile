@@ -6,12 +6,14 @@ RUN mkdir -p /app
 WORKDIR /app
 
 COPY package.json /app
+COPY angular.json /app
 
-RUN npm install --force
+RUN npm install --force  
 
 COPY . /app
 
-RUN npm run build
+RUN npm run build:prod --verbose
+#RUN npx ng build --configuration=production
 
 # Stage 2
 FROM nginx:1.25.2-alpine

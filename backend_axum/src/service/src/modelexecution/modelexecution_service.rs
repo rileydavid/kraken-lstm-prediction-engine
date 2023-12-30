@@ -35,14 +35,12 @@ pub async fn execute_model(
     symbol_id: i32,
 ) -> Result<PredictionResponseDto, GenericError> {
     info!(
-        "Incoming Request: execute_model - from {:?}, to {:?}",
+        "Incoming Request: execute_model - fromDate {:?}, symbol_id {:?}",
         from_date, symbol_id
     );
 
+    // fetch model config + data
     let model_config = model_config_repository::get_model_config(pool, symbol_id).await.unwrap();
-    
-    info!("Model Config: {:?}", model_config);
-
     let start_date = get_from_date(&model_config, &from_date);
     let result_data = ohlc_repository::get_ohlc_hour_range_reduced(pool, symbol_id, start_date, from_date).await.unwrap();
 
