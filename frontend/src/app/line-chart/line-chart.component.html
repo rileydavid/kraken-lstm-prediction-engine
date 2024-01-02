@@ -1,9 +1,15 @@
-<div *ngIf="loadingData" class="loading-indicator">
-    <mat-spinner></mat-spinner>
-</div>
+@if(loadingData){
+    <div *ngIf="loadingData" class="loading-indicator">
+        <mat-spinner></mat-spinner>
+    </div>
+}
+
 <div *ngIf="!selected" class="select-indicator">
     Please select a symbol and date range to fetch data.
 </div>
-<div [hidden]="selected">
+
+@if(selected){
+   <!-- <div [hidden]="selected">-->    
     <div #chart></div>
-</div>
+}
+

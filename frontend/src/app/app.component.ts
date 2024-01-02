@@ -11,7 +11,8 @@ import { HttpClientModule } from '@angular/common/http';
     templateUrl: './app.component.html',
     styleUrl: './app.component.css',
     imports: [CommonModule, RouterLink, RouterOutlet, NavbarComponent, HttpClientModule],
-    providers: [DataService]
+    providers: [DataService],
+
 })
 export class AppComponent {
   title = 'frontend';

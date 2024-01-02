@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use repository::domain::import::ImportModel;
 use serde::{Deserialize, Serialize};
 
@@ -34,5 +35,28 @@ impl From<&ImportDto> for ImportModel {
             value.file_name.to_owned(),
             value.symbol.to_owned(),
         )
+    }
+}
+
+
+
+#[derive(Serialize, Deserialize)]
+pub struct FileNameDto {
+    file_name: String,
+    file_size: u64,
+    uploaded: DateTime<Utc>,
+}
+
+impl FileNameDto {
+    pub fn new(
+        file_name: String,
+        file_size: u64,
+        uploaded: DateTime<Utc>,
+    ) -> Self {
+        FileNameDto{
+            file_name,
+            file_size,
+            uploaded
+        }
     }
 }

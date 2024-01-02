@@ -12,8 +12,31 @@ use std::fs::Permissions;
 use std::io::prelude::*;
 use std::os::unix::fs::PermissionsExt;
 
+use super::import_dto::FileNameDto;
+
 const IMPORT_TIMESCALE: &str = "/import/";
 const IMPORT: &str = "../import/";
+
+pub async fn get_files() -> Result<Vec<FileNameDto>, GenericError> {
+    
+    let mut files: Vec<FileNameDto> = Vec::new();
+
+    for entry in fs::read_dir(IMPORT).unwrap() {
+        if entry.is_ok() {
+                let file_name = entry.as_ref().unwrap().file_name().into_string().unwrap();
+                let file_size = entry.as_ref().unwrap().metadata().unwrap().len();
+                let file_last_modified = entry.as_ref().unwrap().metadata().unwrap().modified().unwrap();
+
+                files.push(FileNameDto::new(
+                    file_name,
+                    file_size,
+                    file_last_modified.into(),
+                ));
+            }
+        }
+    
+    return Ok(files);
+}
 
 pub async fn import_file(
     pool: &PgPool,

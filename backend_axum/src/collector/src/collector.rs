@@ -16,6 +16,8 @@ use utils::{error::generic_error::GenericError, core::postgresdb};
 
 use rayon::prelude::*;
 
+use tokio::sync::mpsc::Receiver;
+
 const CONST_ETHUSD_SUB: &str =
     "{\"event\":\"subscribe\", \"subscription\":{\"name\":\"trade\"}, \"pair\":[\"ETH/USD\"]}";
 
@@ -30,7 +32,7 @@ const CONST_XBTUSD_SUB: &str =
 const SUBSCRIPTIONS: [&str; 3] = [CONST_ETHUSD_SUB, CONST_XBTUSD_SUB, CONST_XRPUSD_SUB];
  */
 
-pub async fn run() {
+pub async fn run(mut receiver: Receiver<String>) {
     info!("Starting Collector");
 
     let mut socket = connect("wss://ws.kraken.com").expect("Could not connect").0;
@@ -39,15 +41,34 @@ pub async fn run() {
     socket = subscribe(socket).await;
 
     tokio::spawn(async move {
-        websocket_loop(socket.into()).await;
+        websocket_loop(socket.into(), receiver).await;
     });
 }
 
-async fn websocket_loop(mut socket: WebSocket<MaybeTlsStream<TcpStream>>) {
+async fn websocket_loop(mut socket: WebSocket<MaybeTlsStream<TcpStream>>, mut receiver: Receiver<String>) {
     let pool: &sqlx::PgPool = postgresdb::get_connection().await;
     let mut symbols: HashMap<String, i32> = init_symbols(pool).await;
     
     loop {
+
+        let mut sub_msg = receiver.try_recv();
+
+        if sub_msg.is_ok() {
+            info!("Channel {:?}", sub_msg.clone().unwrap());
+
+            let sub = format!(
+                "{{\"event\":\"subscribe\", \"subscription\":{{\"name\":\"trade\"}}, \"pair\":[\"{}\"]}}",
+                sub_msg.unwrap()
+            );
+
+            match socket.send(Message::Text(sub.into())) {
+                Ok(it) => it,
+                Err(err) => error!("Error occured subscribing {:?}", err),
+            };       
+
+            info!("sub sent");
+        }
+
         match socket.can_read() {
             true => {
                 let msg = socket.read().unwrap().to_string();
@@ -71,6 +92,12 @@ async fn websocket_loop(mut socket: WebSocket<MaybeTlsStream<TcpStream>>) {
                     }
 
                     let _ = insert_trades(pool, collected_trades).await;
+                }else{
+                    // TODO
+                    // if new sub is added check if it was received properly 
+                    // check if heartbeat intervall is still good
+
+                    info!(msg);
                 }
             }
             false => {}

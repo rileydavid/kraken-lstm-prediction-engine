@@ -1,0 +1,33 @@
+.file-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* This ensures all children are centered */
+    padding: 20px;
+}
+
+.file-upload-wrapper {
+    margin-bottom: 10px;
+    width: 100%; /* Full width of the parent */
+    display: flex; /* Use flex to center children horizontally */
+    justify-content: center; /* This centers the flex child horizontally */
+}
+
+.file-upload-wrapper mat-form-field {
+    width: 50%; /* Adjust this percentage to increase/decrease the width of the upload field */
+    max-width: 500px; /* Optional: Set a max-width if required */
+    /* No need for margin: auto; since we're using flexbox to center */
+}
+
+.upload-btn-container {
+    margin-top: 10px;
+    width: 100%; /* Full width to center the button */
+    display: flex; /* Use flex to center children */
+    justify-content: center; /* Center the button */
+}
+
+.spinner-container {
+    margin-top: 10px;
+    width: 100%; /* Full width to center the spinner */
+    display: flex; /* Use flex to center children */
+    justify-content: center; /* Center the spinner */
+}

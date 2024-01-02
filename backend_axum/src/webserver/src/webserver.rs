@@ -8,11 +8,11 @@ use tower_http::cors::{Any, CorsLayer};
 use utils::core::{webserver_config::get_address, postgresdb};
 
 
-pub async fn run() {
+pub async fn run(sender: tokio::sync::mpsc::Sender<String>) {
 
     let redis = utils::core::cache::init_client().await;
     let pool = postgresdb::get_connection().await; 
-    let app_state = AppState::new(pool.clone(), redis);
+    let app_state = AppState::new(pool.clone(), redis, sender);
 
     let cors = CorsLayer::new()
         .allow_methods(Any)
@@ -26,6 +26,7 @@ pub async fn run() {
         .merge(routes::import::routes::router(pool).await)
         .merge(routes::modelexecution::routes::router(pool).await)
         .merge(routes::trade::routes::router(pool).await)
+        .merge(routes::upload::routes::router().await)
         .layer(cors);
 
     let adress = SocketAddr::from(get_address().await);

@@ -5,6 +5,7 @@ import { Ohlc } from '../models/ohlc.model';
 import { SymbolModel } from '../models/symbol.model';
 import { Trade } from '../models/trade.model';
 import { environment } from '../../environments/environments';
+import { ImportFile } from '../models/import-file';
 
 //const baseUrl = 'http://172.1.0.14:8000';
 //const baseUrl = 'http://127.0.0.1:8000';
@@ -85,5 +86,24 @@ export class DataService {
         symbol: item.symbol
       })))
     );
+  }
+
+  fetchImportFiles() {
+    console.log("fetchImportFiles");  
+    return this.http.get<ImportFile[]>(baseUrl + "/import/files").pipe(
+      map(data => data.map(item => ({
+        file_name: item.file_name,
+        file_size: item.file_size,
+        uploaded: new Date(item.uploaded),
+        symbol: ''
+      })))
+    );
+  }
+
+  importFile(file: ImportFile) {   
+    return this.http.get<String>(baseUrl + "/import/" + file.file_name + "/" + file.symbol).pipe(data => {
+      console.log(data);
+      return data;
+    });
   }
 }

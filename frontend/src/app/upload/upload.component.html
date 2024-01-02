@@ -1,0 +1,21 @@
+<div class="file-upload-container">
+    <p>Upload CSV Files</p>
+    <div class="file-upload-wrapper">
+        <input type="file" (change)="onFilesSelected($event)" #fileInput accept=".csv" multiple id="fileInput" hidden>
+        <mat-form-field appearance="fill">
+            <mat-label>Upload CSV Files</mat-label>
+            <input matInput placeholder="No files chosen" [value]="fileNames" readonly>
+            <button mat-button (click)="fileInput.click()">Select Files</button>
+        </mat-form-field>
+    </div>
+    <div class="upload-btn-container">
+        <button mat-raised-button color="primary" (click)="uploadFiles()"
+            [disabled]="!files.length || isLoading">Upload</button>
+    </div>
+    
+    @if(isLoading){ 
+        <div class="spinner-container">
+            <mat-spinner diameter="40"></mat-spinner>
+        </div>
+    }
+</div>
