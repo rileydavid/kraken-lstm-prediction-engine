@@ -1,26 +1,41 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { DataService } from '../dataservice/data.service';
 import { DatepickerComponent } from '../datepicker/datepicker.component';
 import { SymbolpickerComponent } from '../symbolpicker/symbolpicker.component';
 import { SymbolModel } from '../models/symbol.model';
 import { Trade } from '../models/trade.model';
 import { TradeTableComponent } from '../trade-table/trade-table.component';
-import { symbol } from 'd3';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
+
 
 @Component({
   selector: 'app-trades',
   standalone: true,
   templateUrl: './trades.component.html',
   styleUrl: './trades.component.css',
-  imports: [SymbolpickerComponent, DatepickerComponent, TradeTableComponent]
+  imports: [SymbolpickerComponent, DatepickerComponent, TradeTableComponent, MatProgressSpinnerModule]
 })
-export class TradesComponent {
+export class TradesComponent implements OnInit {
   data: Trade[] = [];
   fromDate: Date = new Date();
   toDate: Date = new Date();
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };
-  selected: boolean = false;
-  loadingData: boolean = false;
+  dataLoaded: boolean = false;
+  isLoading: boolean = false;
+  symbols: SymbolModel[] = [];
+
+  ngOnInit(): void {
+    this.dataService.fetchSymbols().subscribe({
+      next: (data) => {
+        this.symbols = data;
+        console.log("Fetched Symbols")
+      },
+      error: (error) => {
+        console.error('There was an error whilst fetching symbols!', error);
+      }
+    });
+  }
 
   onFromDateChange(date: Date): void {
     this.fromDate = date;
@@ -44,13 +59,13 @@ export class TradesComponent {
       return;
     }
 
-    this.selected = true;
-    this.loadingData = true;
-
+    this.isLoading = true;
 
     this.dataService.fetchTrades(this.fromDate, this.toDate, this.selectedSymbol.id).subscribe({
       next: (data) => {
         this.data = data;
+        this.isLoading = false;
+        this.dataLoaded = true;
         console.log("Fetched Symbols")
       },
       error: (error) => {
@@ -61,6 +76,5 @@ export class TradesComponent {
   
   handleSymbolEvent(data: SymbolModel) {
     this.selectedSymbol = data;
-    this.selected = true;
   }
 }

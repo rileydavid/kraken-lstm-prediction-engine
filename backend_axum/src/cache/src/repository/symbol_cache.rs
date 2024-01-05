@@ -31,3 +31,9 @@ pub async fn update_symbols(redis: &Arc<Client>, symbols: Vec<SymbolCacheModel>)
     let result = redis.json_set(SYMBOLS_KEY, "$".to_string(), serde_json::to_string(&symbols).unwrap(), SetCondition::None).await;
     info!("updated symbols {:?}", result);
 }
+
+pub async fn delete_symbols(redis: &Arc<Client>) {
+    info!("deleting symbols");
+    let result = redis.json_del(SYMBOLS_KEY, "$").await;
+    info!("deleted symbols {:?}", result);
+}

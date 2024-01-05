@@ -88,6 +88,16 @@ export class DataService {
     );
   }
 
+  fetchAvailableSymbols() {
+    console.log("fetchAvailableSymbols");
+    return this.http.get<SymbolModel[]>(baseUrl + "/symbols/available").pipe(
+      map(data => data.map(item => ({
+        id: 0, //using 0 as id for available symbols
+        symbol: item.symbol
+      })))
+    );
+  }
+
   fetchImportFiles() {
     console.log("fetchImportFiles");  
     return this.http.get<ImportFile[]>(baseUrl + "/import/files").pipe(
@@ -102,6 +112,13 @@ export class DataService {
 
   importFile(file: ImportFile) {   
     return this.http.get<String>(baseUrl + "/import/" + file.file_name + "/" + file.symbol).pipe(data => {
+      console.log(data);
+      return data;
+    });
+  }
+
+  addSubscription(symbol: string) {
+    return this.http.get<String>(baseUrl + "/symbols/add/" + symbol).pipe(data => {
       console.log(data);
       return data;
     });

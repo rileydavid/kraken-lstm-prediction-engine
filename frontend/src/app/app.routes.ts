@@ -5,6 +5,7 @@ import { ConfigComponent } from './config/config.component';
 import { TradesComponent } from './trades/trades.component';
 import { UploadComponent } from './upload/upload.component';
 import { ImportComponent } from './import/import.component';
+import { SubscriptionComponent } from './subscription/subscription.component';
 
 export const routes: Routes = [
     { path: 'dashboard', component: DashboardComponent },
@@ -12,6 +13,7 @@ export const routes: Routes = [
     { path: 'trades', component: TradesComponent},
     { path: 'upload', component: UploadComponent },
     { path: 'import', component: ImportComponent },
+    { path: 'subscription', component: SubscriptionComponent },
     { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
 ];
 

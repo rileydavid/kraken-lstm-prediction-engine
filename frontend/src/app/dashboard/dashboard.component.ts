@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { LineChartComponent } from '../line-chart/line-chart.component';
 import { DataService } from '../dataservice/data.service';
 import { DatepickerComponent } from '../datepicker/datepicker.component';
@@ -16,7 +16,7 @@ import { OhlcTableComponent } from '../ohlc-table/ohlc-table.component';
   imports: [LineChartComponent, DatepickerComponent, SymbolpickerComponent, OhlcTableComponent],
   providers: [DataService],
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   @ViewChild('lineChartRef')
   linechart: LineChartComponent = new LineChartComponent;
 
@@ -27,6 +27,20 @@ export class DashboardComponent {
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };
   selected: boolean = false;
   loadingData: boolean = false;
+  dataLoaded: boolean = false;
+  symbols: SymbolModel[] = [];
+
+  ngOnInit(): void {
+    this.dataService.fetchSymbols().subscribe({
+      next: (data) => {
+        this.symbols = data;
+        console.log("Fetched Symbols")
+      },
+      error: (error) => {
+        console.error('There was an error whilst fetching symbols!', error);
+      }
+    });
+  }
 
   onFromDateChange(date: Date): void {
     this.fromDate = date;
@@ -39,6 +53,7 @@ export class DashboardComponent {
   constructor(private dataService: DataService) { }
 
   onButtonClick(): void {
+    console.log("fetch");
 
     if (this.fromDate > this.toDate) {
       alert("From date must be before to date");
@@ -53,9 +68,7 @@ export class DashboardComponent {
     this.selected = true;
     this.loadingData = true;
 
-
     const ohlcHourRangeData$ = this.dataService.fetchOhlcHourRangeData(this.fromDate, this.toDate, this.selectedSymbol.id);
-
     // Create an observable for the second data fetch
     const ohlcPrediction$ = this.dataService.fetchOhlcPrediction(this.selectedSymbol.id, this.toDate);
 
@@ -64,41 +77,16 @@ export class DashboardComponent {
       next: ([ohlcData, predictionData]) => {
         this.data = ohlcData
         console.log(predictionData)
-        this.data.push(predictionData); // Assuming both are arrays, adjust if necessary
+        this.data.push(predictionData);
         this.loadingData = false;
-        // Now that we have both sets of data, trigger the creation of the line chart
+        this.dataLoaded = true; 
         this.linechart.createChart(this.data);
       },
       error: (error) => {
         console.error('There was an error!', error);
       }
     });
-    /*
-    this.dataService.fetchOhlcHourRangeData(this.fromDate, this.toDate, this.selectedSymbol.id).subscribe({
-      next: (data) => {
-        this.data = data;
-        this.loadingData = false;
-        // trigger the creation of linechart
-        this.linechart.createChart(data);
-      },
-      error: (error) => {
-        console.error('There was an error!', error);
-      }
-    });
-
-    this.dataService.fetchOhlcPrediction(this.selectedSymbol.id, this.toDate).subscribe({
-      next: (data) => {
-        this.loadingData = false;
-        this.data.push(data);
-        console.log(data)
-        // trigger the creation of linechart
-      },
-      error: (error) => {
-        console.error('There was an error!', error);
-      }
-    });
-    */
-    
+   
   }
 
   handleSymbolEvent(data: SymbolModel) {

@@ -1,20 +1,32 @@
 <div class="flex-container">
-    <div class="selection-row">
-        <div class="container app-symbolpicker">
-            <app-symbolpicker (selectedSymbolEvent)="handleSymbolEvent($event)"></app-symbolpicker>
-        </div>
-        <div class="date-selection-container">
-            <div class="container app-datepicker common-height">
-                <app-datepicker (fromDateChange)="onFromDateChange($event)" (toDateChange)="onToDateChange($event)"></app-datepicker>
-            </div>
-        </div>
-        <div class="container app-button common-height">
-            <div class="container">
-                <button mat-stroked-button class="button" (click)="onButtonClick()">Fetch</button>
-            </div>
+<div class="selection-row">
+    <div class="container app-symbolpicker">
+        <app-symbolpicker (selectedSymbolEvent)="handleSymbolEvent($event)" [symbols]="symbols"></app-symbolpicker>
+    </div>
+    <div class="date-selection-container">
+        <div class="container app-datepicker common-height">
+            <app-datepicker (fromDateChange)="onFromDateChange($event)" (toDateChange)="onToDateChange($event)"></app-datepicker>
         </div>
     </div>
-    <div class="spacer"></div>
-    <div class="container app-trades-table">
-        <app-trade-table #tradeTableRef [data]="data" [hidden]="!selected"></app-trade-table>
+    <div class="container app-button common-height">
+        <div class="container">
+            <button mat-stroked-button class="button" (click)="onButtonClick()">Fetch</button>
+        </div>
+    </div>
 </div>
+<div class="spacer"></div>
+
+@if(isLoading){
+    <div class="loading-indicator">
+        <mat-spinner diameter="40"></mat-spinner>
+    </div>
+}
+
+@if(!isLoading && dataLoaded) {
+    <div class="container app-trades-table">
+        <app-trade-table #tradeTableRef [data]="data"></app-trade-table>
+    </div>
+    <div class="spacer"></div>
+}
+
+
