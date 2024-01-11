@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 # internal
-api = { path = "src/api" }
 utils = { path ="src/utils" }
 repository = { path = "src/repository" }
 webserver = { path = "src/webserver"}

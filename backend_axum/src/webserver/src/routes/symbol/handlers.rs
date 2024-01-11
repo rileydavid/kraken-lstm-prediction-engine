@@ -16,7 +16,8 @@ pub async fn get_symbols(
     State(app_state): State<AppState>,
 ) -> Result<Json<Vec<SymbolDto>>, ResponseError> {
     info!("Incoming Request: get_symbols");
-    let result = symbol_service::get_symbols(&app_state.pool, app_state.redis).await;
+    //currently redis is not in use
+    let result = symbol_service::get_symbols(&app_state.pool, app_state.redis.unwrap()).await;
     prepare_response(result)
 }
 

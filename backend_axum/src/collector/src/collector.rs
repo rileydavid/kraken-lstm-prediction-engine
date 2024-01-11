@@ -1,6 +1,5 @@
-use std::{collections::HashMap, net::TcpStream};
-
 use crate::dto::trade::Trade;
+use crate::dto::trade_message::TradeMessage;
 use repository::{
     domain::{
         symbol::{self, SymbolModel},
@@ -8,11 +7,12 @@ use repository::{
     },
     repository::{symbol_repository, trade_repository},
 };
-use serde_json::Value;
+use std::{collections::HashMap, net::TcpStream};
+
 use sqlx::PgPool;
 use tracing::{error, info};
 use tungstenite::{connect, stream::MaybeTlsStream, Message, WebSocket};
-use utils::{error::generic_error::GenericError, core::postgresdb};
+use utils::{core::postgresdb, error::generic_error::GenericError};
 
 use rayon::prelude::*;
 
@@ -45,14 +45,26 @@ pub async fn run(mut receiver: Receiver<String>) {
     });
 }
 
-async fn websocket_loop(mut socket: WebSocket<MaybeTlsStream<TcpStream>>, mut receiver: Receiver<String>) {
+async fn websocket_loop(
+    mut socket: WebSocket<MaybeTlsStream<TcpStream>>,
+    mut receiver: Receiver<String>,
+) {
     let pool: &sqlx::PgPool = postgresdb::get_connection().await;
     let mut symbols: HashMap<String, i32> = init_symbols(pool).await;
-    
-    loop {
 
+    /*
+        let parsed: Result<TradeMessage, _> = serde_json::from_str(data);
+
+    match parsed {
+        Ok(msg) => println!("{:#?}", msg),
+        Err(e) => println!("Failed to parse JSON: {}", e),
+    }
+     */
+
+    loop {
         let mut sub_msg = receiver.try_recv();
 
+        // write own function for this!
         if sub_msg.is_ok() {
             info!("Channel {:?}", sub_msg.clone().unwrap());
 
@@ -64,11 +76,12 @@ async fn websocket_loop(mut socket: WebSocket<MaybeTlsStream<TcpStream>>, mut re
             match socket.send(Message::Text(sub.into())) {
                 Ok(it) => it,
                 Err(err) => error!("Error occured subscribing {:?}", err),
-            };       
+            };
 
             info!("sub sent");
         }
 
+        //
         match socket.can_read() {
             true => {
                 let msg = socket.read().unwrap().to_string();
@@ -78,25 +91,31 @@ async fn websocket_loop(mut socket: WebSocket<MaybeTlsStream<TcpStream>>, mut re
                     && !msg.contains("connectionID")
                     && !msg.contains("subscriptionStatus")
                 {
-                    let json: Value = serde_json::from_str(&msg).unwrap();
-                    let mut collected_trades = Trade::parse_from_json(json).unwrap();
+                    // trade message
+                    let mut trade_message: TradeMessage = serde_json::from_str(&msg).unwrap();
 
-                    for trade in collected_trades.iter_mut() {
-                        if symbols.contains_key(trade.get_symbol()) {
-                            trade.set_symbol_id(*symbols.get(trade.get_symbol()).unwrap());
-                        } else {
-                            let _ =
-                                insert_new_symbol(pool,&mut symbols, trade, trade.get_symbol().into())
-                                    .await;
-                        }
+                    // insert symbol id
+                    if !symbols.contains_key(trade_message.get_symbol()) {
+                        let _ = insert_new_symbol(
+                            pool,
+                            &mut symbols,
+                            trade_message.get_symbol().into(),
+                        )
+                        .await;
                     }
 
-                    let _ = insert_trades(pool, collected_trades).await;
-                }else{
-                    // TODO
-                    // if new sub is added check if it was received properly 
-                    // check if heartbeat intervall is still good
+                    let symbol_id = symbols.get(trade_message.get_symbol()).unwrap().to_owned();
+                    // set symbol_id for each trade --> not sure if this is the best way to do it
+                    // but otherwise i can't use from()
+                    for trade in trade_message.get_trades_mut().iter_mut() {
+                        trade.set_symbol_id(symbol_id);
+                    }
 
+                    let _ = insert_trades(pool, trade_message.get_trades()).await;
+                } else {
+                    // TODO
+                    // if new sub is added check if it was received properly
+                    // check if heartbeat intervall is still good
                     info!(msg);
                 }
             }
@@ -130,19 +149,18 @@ async fn init_symbols(pool: &PgPool) -> HashMap<String, i32> {
     }
 }
 
-async fn insert_new_symbol(pool: &PgPool, symbols: &mut HashMap<String, i32>, trade: &mut Trade, symbol: String) {
+async fn insert_new_symbol(pool: &PgPool, symbols: &mut HashMap<String, i32>, symbol: String) {
     info!("Inserting new symbol into database");
 
-    let symbol_model_resutl: Result<SymbolModel, GenericError> =
+    let symbol_model_result: Result<SymbolModel, GenericError> =
         symbol_repository::insert_symbol(pool, symbol).await;
 
-    match symbol_model_resutl {
+    match symbol_model_result {
         Ok(symbol_model) => {
             symbols.insert(
                 symbol_model.get_symbol().to_string(),
                 symbol_model.get_id().to_owned(),
             );
-            trade.set_symbol_id(symbol_model.get_id().to_owned());
         }
         Err(err) => {
             error!("Could not insert new symbol {:?}", err);
@@ -150,7 +168,7 @@ async fn insert_new_symbol(pool: &PgPool, symbols: &mut HashMap<String, i32>, tr
     }
 }
 
-async fn insert_trades(pool: &PgPool, trades: Vec<Trade>) {
+async fn insert_trades(pool: &PgPool, trades: &Vec<Trade>) {
     let count = trades.len();
 
     let trades = trades

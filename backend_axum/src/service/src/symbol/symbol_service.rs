@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 
 use tracing::error;
 
+// all symbols listed on the exchange
 lazy_static! {
     static ref SYMBOLS: HashSet<&'static str> = {
         let mut set = HashSet::new();
@@ -29,7 +30,15 @@ pub async fn get_available_symbols() -> Result<Vec<SymbolDto>, GenericError> {
 }
 
 pub async fn add_subscription_symbol(sender: &tokio::sync::mpsc::Sender<String>, symbol: String) -> Result<String, GenericError> {
+    
     //TODO: check if symbol is already subscribed 
+    // write symbol to the database if it is not already there 
+    // if it is already there it is already subscribed and we can return ok
+
+    
+
+
+    
     if SYMBOLS.contains(symbol.as_str()) {
         match sender.send(symbol + "/USD".into()).await {
             Ok(_) => {

@@ -10,7 +10,9 @@ use utils::core::{webserver_config::get_address, postgresdb};
 
 pub async fn run(sender: tokio::sync::mpsc::Sender<String>) {
 
-    let redis = utils::core::cache::init_client().await;
+    //let redis = utils::core::cache::init_client().await;
+    let redis = None; //currently this is not used
+
     let pool = postgresdb::get_connection().await; 
     let app_state = AppState::new(pool.clone(), redis, sender);
 
