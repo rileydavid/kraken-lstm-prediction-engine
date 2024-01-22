@@ -25,22 +25,10 @@ class ModelExecution:
 
     def execute(self):
         print("Starting execution")
-
-        # determine the size of the dataset (hours back)
-        #max_hours = np.max(self.config['lags'] + self.config['span_sizes']
-        #                    + self.config['window_sizes'])
-
-        #print("Max hours: ", max_hours)
-
-        #self.data_service.get_ohlc_hour_start_date(self.config['symbol_id'],
-        #                                                 int(self.config['lookback']) + max_hours,
-        #                                                  self.config['from_date'])
         
         df = pd.DataFrame(self.config['data'])
         print(df.head())
-        #df = df.drop(columns=['symbol_id', 'open_price', "low", "high"])
 
-        # start date --> + 1 hour will be predicted
         df.reset_index(inplace=True)
 
         data_preperation_service = DataPreparation(df, self.config)
@@ -58,5 +46,6 @@ class ModelExecution:
         parsed_date = datetime.strptime(self.config['from_date'], '%Y-%m-%dT%H:%M:%S%z')
         new_date = parsed_date + timedelta(hours=1)
         output_date = new_date.strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
+        print(output_date)
         
         return output_date, predicted_price

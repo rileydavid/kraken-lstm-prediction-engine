@@ -9,7 +9,7 @@ import { SubscriptionComponent } from './subscription/subscription.component';
 
 export const routes: Routes = [
     { path: 'dashboard', component: DashboardComponent },
-    { path: 'config', component: ConfigComponent },
+    //{ path: 'config', component: ConfigComponent },
     { path: 'trades', component: TradesComponent},
     { path: 'upload', component: UploadComponent },
     { path: 'import', component: ImportComponent },

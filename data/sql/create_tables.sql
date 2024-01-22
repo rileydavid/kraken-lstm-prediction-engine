@@ -423,7 +423,7 @@ BEGIN
     AND model_config.active IS TRUE;
 END;$$;
 
-SELECT * FROM insert_symbol('ETHUSD');
+SELECT * FROM insert_symbol('ETH/USD');
 
 INSERT INTO model_config 
 (symbol_id, modelname, data_type, lookback, lags, window_sizes, span_sizes, active, features) 

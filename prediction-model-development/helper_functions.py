@@ -83,6 +83,13 @@ def normalize_year(data, columns=['year']):
         data[column+'_normalized'] = data[column].apply(lambda x: normalize_feature(x, min, max+1)) # +1 to account for 2024
     return data
 
+def cyclic_encoding_year(data):
+    day = 24*60*60
+    year = (365.2425)*day
+    data['year_sin'] = data['year'].apply(lambda x: np.sin(2 * np.pi / year))
+    data['year_cos'] = data['year'].apply(lambda x: np.cos(2 * np.pi / year))
+    return data
+
 def get_month_length(month, year):
     return monthrange(year, month)[1]
 

@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json /app
 COPY angular.json /app
 
-RUN npm install --force  
+RUN npm install --legacy-peer-deps  
 
 COPY . /app
 

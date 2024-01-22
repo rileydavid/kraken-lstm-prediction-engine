@@ -40,10 +40,12 @@ export class SubscriptionComponent implements OnInit {
     this.dataService.addSubscription(this.selectedSymbol.symbol).subscribe({
       next: (data) => {
         this.loadingData = false;
-        alert("Added Subscription for " + this.selectedSymbol.symbol);
+        alert(data.toString())
         console.log("Added Subscription")
       },
       error: (error) => {
+        this.loadingData = false;
+        alert("Error subscribing to " + this.selectedSymbol.symbol);
         console.error('There was an error whilst adding subscription!', error);
       }
     });

@@ -123,4 +123,11 @@ export class DataService {
       return data;
     });
   }
+
+  uploadFiles(formData: any) { 
+    return this.http.post(environment.apiUrl + '/upload', formData).pipe(data => {
+      console.log(data);
+      return data;
+    });
+  }
 }

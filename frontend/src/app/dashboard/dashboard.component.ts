@@ -22,6 +22,7 @@ export class DashboardComponent implements OnInit {
 
   data: Ohlc[] = [];
   predictedData: Ohlc[] = [];
+  startDate: Date = new Date();
   fromDate: Date = new Date();
   toDate: Date = new Date();
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };
@@ -79,14 +80,14 @@ export class DashboardComponent implements OnInit {
         console.log(predictionData)
         this.data.push(predictionData);
         this.loadingData = false;
-        this.dataLoaded = true; 
+        this.dataLoaded = true;
         this.linechart.createChart(this.data);
       },
       error: (error) => {
         console.error('There was an error!', error);
       }
     });
-   
+
   }
 
   handleSymbolEvent(data: SymbolModel) {

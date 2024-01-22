@@ -12,7 +12,7 @@ WORKDIR /backend
 
 COPY ./ .
 
-RUN cargo build --target x86_64-unknown-linux-musl --release
+RUN cargo build --target x86_64-unknown-linux-musl --release --jobs 8
 
 ####################################################################################################
 ## Final image
@@ -21,8 +21,10 @@ FROM alpine
 
 WORKDIR /backend
 
-COPY --from=builder /backend/target/x86_64-unknown-linux-musl/release/backend ./
+COPY --from=builder /backend/target/x86_64-unknown-linux-musl/release/server ./
+#copying the .env file for docker 
+COPY --from=builder /backend/env/.env ./
 
 EXPOSE 8000
 
-CMD ["/backend/backend"]
+CMD ["/backend/server"]

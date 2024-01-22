@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { environment } from '../../environments/environments';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { DataService } from '../dataservice/data.service';
 
 @Component({
   selector: 'app-upload',
@@ -13,12 +14,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatInputModule,
     MatProgressSpinnerModule,
   ],
+  providers: [DataService],
   templateUrl: './upload.component.html',
   styleUrl: './upload.component.css',
 })
-export class UploadComponent {
+export class UploadComponent implements OnInit {
 
-  constructor(private http: HttpClient) { }
+  constructor(private dataService: DataService) { }
+
+  ngOnInit(): void {}
 
   isLoading = false;
   files: File[] = [];
@@ -36,16 +40,18 @@ export class UploadComponent {
     const formData = new FormData();
     Array.from(this.files).forEach(file => formData.append('files', file, file.name));
 
-    this.http.post(environment.apiUrl + '/upload', formData).subscribe(response => {
+
+    this.dataService.uploadFiles(formData).subscribe(data => {
+      if(data.toString() == "Ok"){
+        // remove file from list
+        this.files = [];
+        this.fileNames = '';
+        this.isLoading = false;
+        alert(`Import success`);
+      }else {
+        alert(`Import failed`);
+      }
       this.isLoading = false;
-      console.log('Upload success', response);
-      // Clear the files after upload
-      this.files = [];
-      this.fileNames = '';
-      this.isLoading = false;
-    }, error => {
-      this.isLoading = false;
-      console.error('Upload error', error);
     });
   }
 }

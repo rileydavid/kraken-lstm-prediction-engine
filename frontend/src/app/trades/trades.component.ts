@@ -7,8 +7,6 @@ import { Trade } from '../models/trade.model';
 import { TradeTableComponent } from '../trade-table/trade-table.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-
-
 @Component({
   selector: 'app-trades',
   standalone: true,
@@ -18,6 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 })
 export class TradesComponent implements OnInit {
   data: Trade[] = [];
+  startDate: Date = new Date();
   fromDate: Date = new Date();
   toDate: Date = new Date();
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };
@@ -26,6 +25,7 @@ export class TradesComponent implements OnInit {
   symbols: SymbolModel[] = [];
 
   ngOnInit(): void {
+    console.log("startDate", this.startDate);
     this.dataService.fetchSymbols().subscribe({
       next: (data) => {
         this.symbols = data;
