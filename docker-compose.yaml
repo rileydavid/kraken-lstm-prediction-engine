@@ -46,8 +46,8 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL} # 'rileydavid@live.at'
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD} # 'password'
-    volumes:
-      - ./data/pgadmin:/var/lib/pgadmin
+    #volumes:
+    #  - ./data/pgadmin:/var/lib/pgadmin
 
 
   # https://blog.min.io/setting-up-a-development-machine-with-mlflow-and-minio/
