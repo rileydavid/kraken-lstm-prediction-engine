@@ -24,7 +24,7 @@ services:
       TZ: 'GMT+0'
       PGTZ: 'GMT+0'
     volumes:
-      - ./data/timescale:/pg-data
+      - ./data/timescale/data:/pg-data
       - ./data/import/:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     # needs to be tested 
