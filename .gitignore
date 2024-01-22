@@ -15,12 +15,12 @@ Cargo.lock
 *.pdb
 
 # docker data 
-/data/import/
-/data/grafana
-/data/pgadmin
-/data/timescale
-/data/minio
-/data/redis/
+/data/import/*
+/data/grafana/*
+/data/pgadmin/*
+/data/timescale/*
+/data/minio/*
+/data/redis/*
 /prediction-model-development/*.csv
 /prediction-model-execution/*.csv
 
