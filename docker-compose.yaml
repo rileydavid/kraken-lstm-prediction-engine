@@ -20,11 +20,12 @@ services:
       POSTGRES_DB: ${PG_DATABASE} # 'db'
       POSTGRES_USER: ${PG_USER} # 'admin'
       POSTGRES_PASSWORD: ${PG_PASSWORD} # 'password'
-      PGDATA: '/pg-data'
+      #PGDATA: '/pg-data'
       TZ: 'GMT+0'
       PGTZ: 'GMT+0'
+      PGDATA: '/var/lib/postgresql/data/pgdata/'
     volumes:
-      - ./data/timescale/data:/pg-data
+      - ./data/timescale/:/var/lib/postgresql/data
       - ./data/import/:/import/
       - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
     # needs to be tested 
