@@ -1,4 +1,5 @@
 <div class="flex-container">
+@if(!isLoading){
 <div class="selection-row">
     <div class="container app-symbolpicker">
         <app-symbolpicker (selectedSymbolEvent)="handleSymbolEvent($event)" [symbols]="symbols"></app-symbolpicker>
@@ -14,6 +15,7 @@
         </div>
     </div>
 </div>
+}
 <div class="spacer"></div>
 
 @if(isLoading){

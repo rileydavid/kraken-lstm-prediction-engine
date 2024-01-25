@@ -21,14 +21,14 @@ export class TradesComponent implements OnInit {
   toDate: Date = new Date();
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };
   dataLoaded: boolean = false;
-  isLoading: boolean = false;
+  isLoading: boolean = true;
   symbols: SymbolModel[] = [];
 
   ngOnInit(): void {
-    console.log("startDate", this.startDate);
     this.dataService.fetchSymbols().subscribe({
       next: (data) => {
         this.symbols = data;
+        this.isLoading = false;
         console.log("Fetched Symbols")
       },
       error: (error) => {

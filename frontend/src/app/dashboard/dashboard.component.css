@@ -49,7 +49,11 @@
     height: 20px; /* or any other size */
     display: block; /* to ensure it takes up space as a block element */
 }
-  
+
+.select-indicator {
+    display: flex;
+    justify-content: center;
+}
 
 /* To prevent wrapping or misalignment, you might want to control the width of the datepickers and button */
 @media (min-width: 768px) { /* Adjust breakpoint as needed */

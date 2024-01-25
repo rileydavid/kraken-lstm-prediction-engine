@@ -7,13 +7,14 @@ import { Ohlc } from '../models/ohlc.model';
 import { SymbolModel } from '../models/symbol.model';
 import { forkJoin } from 'rxjs';
 import { OhlcTableComponent } from '../ohlc-table/ohlc-table.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
   standalone: true,
-  imports: [LineChartComponent, DatepickerComponent, SymbolpickerComponent, OhlcTableComponent],
+  imports: [LineChartComponent, DatepickerComponent, SymbolpickerComponent, OhlcTableComponent, MatProgressSpinnerModule],
   providers: [DataService],
 })
 export class DashboardComponent implements OnInit {
@@ -25,6 +26,7 @@ export class DashboardComponent implements OnInit {
   startDate: Date = new Date();
   fromDate: Date = new Date();
   toDate: Date = new Date();
+  symbolsLoading = true;
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };
   selected: boolean = false;
   loadingData: boolean = false;
@@ -35,6 +37,7 @@ export class DashboardComponent implements OnInit {
     this.dataService.fetchSymbols().subscribe({
       next: (data) => {
         this.symbols = data;
+        this.symbolsLoading = false;
         console.log("Fetched Symbols")
       },
       error: (error) => {
@@ -77,14 +80,14 @@ export class DashboardComponent implements OnInit {
     forkJoin([ohlcHourRangeData$, ohlcPrediction$]).subscribe({
       next: ([ohlcData, predictionData]) => {
         this.data = ohlcData
-        console.log(predictionData)
         this.data.push(predictionData);
         this.loadingData = false;
         this.dataLoaded = true;
         this.linechart.createChart(this.data);
       },
       error: (error) => {
-        console.error('There was an error!', error);
+        this.loadingData = false;
+        alert(error.error.message);
       }
     });
 

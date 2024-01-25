@@ -1,24 +1,44 @@
 <div class="flex-container">
-    <div class="selection-row">
-        <div class="container app-symbolpicker">
-            <app-symbolpicker (selectedSymbolEvent)="handleSymbolEvent($event)" [symbols]="symbols"></app-symbolpicker>
-        </div>
-        <div class="date-selection-container">
-            <div class="container app-datepicker common-height">
-                <app-datepicker (fromDateChange)="onFromDateChange($event)" (toDateChange)="onToDateChange($event)"></app-datepicker>
+    @if(!symbolsLoading){
+        <div class="selection-row">
+            <div class="container app-symbolpicker">
+                <app-symbolpicker (selectedSymbolEvent)="handleSymbolEvent($event)" [symbols]="symbols"></app-symbolpicker>
             </div>
-        </div>
-        <div class="container app-button common-height">
-            <div class="container">
-                <button mat-stroked-button class="button" (click)="onButtonClick()">Fetch</button>
-            </div>
-        </div>
-    </div>
 
-    <div class="container app-line-chart">
-        <app-line-chart #lineChartRef  
-        [selected]="selected" [loadingData]="loadingData"></app-line-chart>
-    </div>
+
+            <div class="date-selection-container">
+                <div class="container app-datepicker common-height">
+                    <app-datepicker (fromDateChange)="onFromDateChange($event)" (toDateChange)="onToDateChange($event)"></app-datepicker>
+                </div>
+            </div>
+            <div class="container app-button common-height">
+                <div class="container">
+                    <button mat-stroked-button class="button" (click)="onButtonClick()">Fetch</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if(symbolsLoading || loadingData){
+        <div class="spacer"></div>
+        <div class="container app-symbolpicker">
+            <mat-spinner diameter="40"></mat-spinner>
+        </div>
+    }
+
+    @if(!selected && !symbolsLoading){
+        <div class="select-indicator">
+            Please select a symbol and date range to fetch data.
+        </div>
+    }
+
+    @if(dataLoaded){
+        <div class="container app-line-chart">
+            <app-line-chart #lineChartRef  
+            [selected]="selected" [loadingData]="loadingData"></app-line-chart>
+        </div>
+    }
+
 
     @if(dataLoaded){
         <div class="spacer"></div>

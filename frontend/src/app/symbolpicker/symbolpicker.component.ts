@@ -18,7 +18,7 @@ export class SymbolpickerComponent {
   @Output() selectedSymbolEvent = new EventEmitter<SymbolModel>;
   selectedSymbol: SymbolModel = { "id": 0, "symbol": "" };  //Placeholder 
   
-  constructor(private dataService: DataService) { }
+  constructor() { }
 
   onSymbolSelected($event: any): void {
     console.log(this.selectedSymbol);

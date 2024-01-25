@@ -27,11 +27,13 @@ pub async fn get_files() -> Result<Vec<FileNameDto>, GenericError> {
                 let file_size = entry.as_ref().unwrap().metadata().unwrap().len();
                 let file_last_modified = entry.as_ref().unwrap().metadata().unwrap().modified().unwrap();
 
-                files.push(FileNameDto::new(
-                    file_name,
-                    file_size,
-                    file_last_modified.into(),
-                ));
+                if file_name.ends_with(".csv") {    
+                    files.push(FileNameDto::new(
+                        file_name,
+                        file_size,
+                        file_last_modified.into(),
+                    ));
+                }
             }
         }
     

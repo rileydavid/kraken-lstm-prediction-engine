@@ -7,10 +7,7 @@ import { Trade } from '../models/trade.model';
 import { environment } from '../../environments/environments';
 import { ImportFile } from '../models/import-file';
 
-//const baseUrl = 'http://172.1.0.14:8000';
-//const baseUrl = 'http://127.0.0.1:8000';
 const baseUrl = environment.apiUrl;
-
 const ohlcHourRangeUrl = `${baseUrl}/ohlc/hour/range`;
 const ohclHourPredictionUrl = `${baseUrl}/execute/model`;
 const tradesUrl = `${baseUrl}/trades`;
@@ -77,9 +74,6 @@ export class DataService {
   }
 
   fetchSymbols() {
-    console.log("is prod? ", environment.production);
-    console.log(baseUrl);
-
     return this.http.get<SymbolModel[]>(baseUrl + "/symbols").pipe(
       map(data => data.map(item => ({
         id: parseInt(item.id.toString()),
@@ -112,21 +106,18 @@ export class DataService {
 
   importFile(file: ImportFile) {   
     return this.http.get<String>(baseUrl + "/import/" + file.file_name + "/" + file.symbol).pipe(data => {
-      console.log(data);
       return data;
     });
   }
 
   addSubscription(symbol: string) {
     return this.http.get<String>(baseUrl + "/symbols/add/" + symbol).pipe(data => {
-      console.log(data);
       return data;
     });
   }
 
   uploadFiles(formData: any) { 
     return this.http.post(environment.apiUrl + '/upload', formData).pipe(data => {
-      console.log(data);
       return data;
     });
   }

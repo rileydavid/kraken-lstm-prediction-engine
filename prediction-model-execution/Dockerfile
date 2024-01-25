@@ -1,4 +1,3 @@
-#pyhton kernel 3.10.12 was used for training
 FROM python:3.10.13-slim 
 
 WORKDIR /usr/src/app
@@ -12,10 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir model
 
-# launch model execution 
-#CMD ["python", "-u", "server.py"]
+# launch model service 
 CMD ["gunicorn", "-b", "0.0.0.0:7000", "wsgi:app"]
 
-# docker build -t model_execution .
-# docker run  model_execution
-# -p 4000:7000

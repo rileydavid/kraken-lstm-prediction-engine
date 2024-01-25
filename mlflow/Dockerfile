@@ -1,7 +1,6 @@
 FROM python:3.10-slim
 
 RUN apt-get update && apt-get install -y curl
-RUN pip install mlflow[extras] psycopg2-binary boto3 cryptography pymysql
-# not sure in pymysql is needed here
+RUN pip install mlflow[extras] psycopg2-binary boto3 cryptography 
 
 EXPOSE 5000

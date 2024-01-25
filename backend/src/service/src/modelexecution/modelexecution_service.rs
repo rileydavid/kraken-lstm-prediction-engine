@@ -6,6 +6,7 @@ use chrono::Utc;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use repository::domain::model_config::ModelConfigModel;
+use repository::domain::ohlc::OhlcModel;
 use repository::repository::model_config_repository;
 use repository::repository::ohlc_repository;
 use tracing::info;
@@ -15,7 +16,7 @@ use utils::error::service_error::ServiceError;
 
 use super::prediction_dto::PredictionRequestDto;
 
-fn get_from_date(model_config: &ModelConfigModel, from_date: &DateTime<Utc>) -> DateTime<Utc> {
+fn get_timestep_count(model_config: &ModelConfigModel) -> i64 {
     let look = model_config.get_lookback();
     let max_lag_span = model_config
         .get_lags()
@@ -25,8 +26,19 @@ fn get_from_date(model_config: &ModelConfigModel, from_date: &DateTime<Utc>) -> 
         .max()
         .copied()
         .unwrap_or_default();
+    
+    (max_lag_span + look) as i64
+}
 
-    *from_date - chrono::Duration::hours((max_lag_span + look) as i64)
+fn is_valid_dataset(dataset: &Vec<OhlcModel>, timesteps: i64) -> bool {
+    match dataset.len() == timesteps as usize {
+        true => true,
+        false => false,
+    }
+}
+
+fn get_from_date(timesteps: &i64, from_date: &DateTime<Utc>) -> DateTime<Utc> {  
+    *from_date - chrono::Duration::hours(*timesteps)
 }
 
 pub async fn execute_model(
@@ -41,8 +53,14 @@ pub async fn execute_model(
 
     // fetch model config + data
     let model_config = model_config_repository::get_model_config(pool, symbol_id).await.unwrap();
-    let start_date = get_from_date(&model_config, &from_date);
+    let timesteps = get_timestep_count(&model_config);
+    let start_date = get_from_date(&timesteps, &from_date);
     let result_data = ohlc_repository::get_ohlc_hour_range_reduced(pool, symbol_id, start_date, from_date).await.unwrap();
+
+    // check if dataset is valid
+    if !is_valid_dataset(&result_data, timesteps) {
+        return Err(ServiceError::general_error("Invalid dataset: Not enough timesteps avaliable".to_string()));
+    }
 
     let mut request = PredictionRequestDto::from(model_config);
     request.set_from_date(from_date);
@@ -72,4 +90,4 @@ pub async fn execute_model(
         }
         Err(err) => Err(ServiceError::general_error(err.to_string())),
     }
-}
+}   

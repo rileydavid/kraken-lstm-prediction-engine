@@ -1,4 +1,5 @@
-<div *ngIf="data" class="ohlc-table-container">
+@if(data){
+<div class="ohlc-table-container">
     <mat-table [dataSource]="data" matSort class="mat-elevation-z8">
         <!-- TODO: Implement sorting -->
         <ng-container *ngFor="let column of displayedColumns" [matColumnDef]="column">
@@ -19,3 +20,4 @@
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </mat-table>
 </div>
+}

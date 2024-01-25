@@ -5,8 +5,10 @@ app = Flask(__name__)
 
 @app.route('/execute', methods=['POST'])
 def execute_model():
+    print("Resquest Received")
     try:
         config = request.json
+        print(config)
         model_execution = ModelExecution(config)
         timestamp, price = model_execution.execute()
         return jsonify({"bucket": timestamp, "close_price": price.item()}), 200

@@ -29,7 +29,6 @@ export class ImportComponent implements OnInit {
   ngOnInit(): void {
     this.dataService.fetchImportFiles().subscribe(data => {
       this.files = data;
-      console.log(data);
       this.isLoading = false;
     });
   }
@@ -41,7 +40,6 @@ export class ImportComponent implements OnInit {
     alert(`Import started for ${file.file_name}`);
     this.isImporting = true;
     this.dataService.importFile(file).subscribe(data => {
-      console.log(data);
       if(data.toString() == "Ok"){
         // remove file from list
         this.files = this.files.filter(item => item.file_name !== file.file_name);
