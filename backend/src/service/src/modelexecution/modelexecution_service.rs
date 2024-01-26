@@ -31,7 +31,7 @@ fn get_timestep_count(model_config: &ModelConfigModel) -> i64 {
 }
 
 fn is_valid_dataset(dataset: &Vec<OhlcModel>, timesteps: i64) -> bool {
-    match dataset.len() == timesteps as usize {
+    match dataset.len() == (timesteps as usize) + 1 {
         true => true,
         false => false,
     }
@@ -58,7 +58,7 @@ pub async fn execute_model(
     let result_data = ohlc_repository::get_ohlc_hour_range_reduced(pool, symbol_id, start_date, from_date).await.unwrap();
 
     // check if dataset is valid
-    if !is_valid_dataset(&result_data, timesteps) {
+    if is_valid_dataset(&result_data, timesteps) == false {
         return Err(ServiceError::general_error("Invalid dataset: Not enough timesteps avaliable".to_string()));
     }
 

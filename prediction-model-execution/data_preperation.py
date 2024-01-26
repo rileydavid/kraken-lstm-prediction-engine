@@ -107,7 +107,7 @@ class DataPreparation:
         self.data['bucket'] = pd.to_datetime(self.data['bucket'])
         self.data.set_index('bucket', inplace=True)
         if fill: 
-            self.data = self.data.resample('H').asfreq()
+            self.data = self.data.resample('h').asfreq()
             self.data['close_price'] = self.data['close_price'].ffill() # carry over values from last hour 
             self.data['volume'] = self.data['volume'].fillna(0) # fill missing values with 0 because there have been no trades 
             self.data['count'] = self.data['count'].fillna(0)

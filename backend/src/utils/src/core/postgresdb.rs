@@ -14,6 +14,8 @@ async fn init_connection() -> Pool<Postgres> {
     info!("execute : initializing db connection ...");
     let db_url = env::var("DATABASE_URL").unwrap_or_else(|_| panic!("DATABASE_URL must be set!"));
 
+    info!("DATABASE_URL: {}", db_url);
+
     let pool = PgPoolOptions::new()
         .max_connections(4)
         .connect(&db_url)

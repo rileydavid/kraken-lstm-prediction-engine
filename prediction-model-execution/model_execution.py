@@ -16,7 +16,7 @@ class ModelExecution:
         self.config = config
 
         self.model_provider = ModelProvider(os.getenv('S3_BUCKET'),
-                                           os.getenv('MODEL_NAME'),
+                                           config['modelname'],
                                            os.getenv('AWS_ACCESS_KEY_ID'),
                                            os.getenv('AWS_SECRET_ACCESS_KEY'),
                                            os.getenv('S3_ENDPOINT_URL'))
@@ -27,7 +27,6 @@ class ModelExecution:
         print("Starting execution")
         
         df = pd.DataFrame(self.config['data'])
-        print(df.head())
 
         df.reset_index(inplace=True)
 
