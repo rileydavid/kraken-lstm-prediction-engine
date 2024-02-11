@@ -21,7 +21,7 @@ Cargo.lock
 /data/timescale/*
 /data/minio/*
 /data/redis/*
-/prediction-model-development/*.csv
+#/prediction-model-development/*.csv
 /prediction-model-execution/*.csv
 
 
