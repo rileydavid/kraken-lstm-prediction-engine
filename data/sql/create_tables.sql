@@ -54,30 +54,6 @@ BEGIN
 END;
 $$;
 
-
--- replaced with updated version below (for better performance)
--- CREATE OR REPLACE PROCEDURE insert_trade (
---     _time TIMESTAMPTZ,
---     _price DOUBLE PRECISION,  
---     _volume DOUBLE PRECISION, 
---     _side TEXT,
---     _order_type TEXT,
---     _symbol TEXT
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE symbol_result INTEGER;
--- BEGIN
---     SELECT id INTO symbol_result FROM symbols WHERE symbol = _symbol;
--- 
---     IF symbol_result IS NULL THEN
---         INSERT INTO symbols (symbol) VALUES (_symbol) RETURNING id INTO symbol_result;
---     END IF;
--- 
---     INSERT INTO trade (time, price, volume, side, order_type, symbol_id) 
---     VALUES (_time, _price, _volume, _side, _order_type, symbol_result);
--- END;$$;
-
 -- insert trade --> used by the collector
 CREATE OR REPLACE PROCEDURE insert_trade (
     _time TIMESTAMPTZ,
@@ -150,75 +126,6 @@ SELECT add_continuous_aggregate_policy('ohlc_hour',
     start_offset => INTERVAL '3 hour', 
     end_offset => INTERVAL '1 hour',
     schedule_interval => INTERVAL '1 hour');
-
--- CREATE OR REPLACE FUNCTION get_ohlc_hour (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_symbol_id INTEGER 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     open_price DOUBLE PRECISION,
---     high DOUBLE PRECISION,
---     low DOUBLE PRECISION,
---     close_price DOUBLE PRECISION,
---     volume DOUBLE PRECISION,
---     count INTEGER,
---     symbol_id INTEGER
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 hour';
---     
---     RETURN QUERY SELECT 
---         ohlc_hour.bucket,
---         ohlc_hour.open_price,
---         ohlc_hour.high,
---         ohlc_hour.low,
---         ohlc_hour.close_price,
---         ohlc_hour.volume,
---         ohlc_hour.count,
---         ohlc_hour.symbol_id
---     FROM ohlc_hour
---     WHERE ohlc_hour.symbol_id = input_symbol_id
---     AND ohlc_hour.bucket >= NOW() - interval_duration
---     ORDER BY ohlc_hour.bucket; 
--- END;$$;
-
--- using id instead of text for symbol
--- CREATE OR REPLACE FUNCTION get_ohlc_hour_start_date (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_start_date TIMESTAMPTZ,
---     input_symbol_id INTEGER 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     close_price DOUBLE PRECISION,
---     volume DOUBLE PRECISION,
---     count INTEGER, 
---     symbol_id INTEGER
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 hour';
---     
---     RETURN QUERY SELECT 
---         ohlc_hour.bucket,
---         ohlc_hour.close_price,
---         ohlc_hour.volume,
---         ohlc_hour.count,
---         ohlc_hour.symbol_id
---     FROM ohlc_hour
---     WHERE ohlc_hour.symbol_id = input_symbol_id 
---     AND ohlc_hour.bucket >= input_start_date - interval_duration 
---     AND input_start_date >= ohlc_hour.bucket 
---     ORDER BY ohlc_hour.bucket; 
--- END;$$;
 
 CREATE OR REPLACE FUNCTION get_ohlc_hour_range (
     input_from_date TIMESTAMPTZ,
@@ -301,76 +208,6 @@ BEGIN
     ORDER BY ohlc_day.bucket; 
 END;$$;
 
--- using symbol_id
--- CREATE OR REPLACE FUNCTION get_ohlc_day (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_symbol_id INTEGER 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     open_price DOUBLE PRECISION,
---     high DOUBLE PRECISION,
---     low DOUBLE PRECISION,
---     close_price DOUBLE PRECISION,
---     volume DOUBLE PRECISION,
---     count INTEGER,
---     symbol_id INTEGER
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 day';
---     
---     RETURN QUERY SELECT 
---         ohlc_day.bucket,
---         ohlc_day.open_price,
---         ohlc_day.high,
---         ohlc_day.low,
---         ohlc_day.close_price,
---         ohlc_day.volume,
---         ohlc_day.count,
---         ohlc_day.symbol_id
---     FROM ohlc_day
---     WHERE ohlc_day.symbol_id = input_symbol_id
---     AND ohlc_day.bucket >= NOW() - interval_duration
---     ORDER BY ohlc_day.bucket; 
--- END;$$;
-
--- get ohlc using start date and symbol_id
--- CREATE OR REPLACE FUNCTION get_ohlc_day_start_date (
---     input_interval INTEGER, -- in days / all for all symbols
---     input_start_date TIMESTAMPTZ,
---     input_symbol_id INTEGER 
--- )
--- RETURNS TABLE (
---     bucket TIMESTAMPTZ,
---     close_price DOUBLE PRECISION,
---     volume DOUBLE PRECISION,
---     count INTEGER, 
---     symbol_id INTEGER
--- )
--- LANGUAGE plpgsql    
--- AS $$
--- DECLARE 
--- interval_duration INTERVAL; 
--- BEGIN
---     interval_duration := input_interval * INTERVAL '1 day';
--- 
---     RETURN QUERY SELECT 
---         ohlc_day.bucket,
---         ohlc_day.close_price,
---         ohlc_day.volume,
---         ohlc_day.count,
---         ohlc_day.symbol_id
---     FROM ohlc_day
---     WHERE ohlc_day.symbol_id = input_symbol_id
---     AND ohlc_day.bucket >= input_start_date - interval_duration 
---     AND input_start_date >= ohlc_day.bucket 
---     ORDER BY ohlc_day.bucket; 
--- END;$$;
--- 
 -- model config for easy swapping of models
 CREATE TABLE model_config (
     id SERIAL PRIMARY KEY,
@@ -423,16 +260,37 @@ BEGIN
     AND model_config.active IS TRUE;
 END;$$;
 
+-- Inserting ETH/USD to make sure ETH/USD has id 1
 SELECT * FROM insert_symbol('ETH/USD');
+
+-- INSERT INTO model_config 
+-- (symbol_id, modelname, data_type, lookback, lags, window_sizes, span_sizes, active, features) 
+-- VALUES 
+-- (1, 'model.pkl', 'np.float32', 16, ARRAY[12, 168], ARRAY[]::INTEGER[], ARRAY[6, 12], true, 
+-- ARRAY['is_holiday', 'close_price', 'volume', 'is_weekend', 'count', 'hour_cos', 'hour_sin', 
+-- 'day_of_week_cos', 'day_of_week_sin', 'month_cos', 'month_sin', 'day_of_month_sin', 
+-- 'day_of_month_cos', 'year_normalized', 'close_lag12', 'close_lag168', 'ema_6_close_price', 
+-- 'ema_12_close_price']::TEXT[]);
+
+-- INSERT INTO model_config 
+-- (symbol_id, modelname, data_type, lookback, lags, window_sizes, span_sizes, active, features) 
+-- VALUES 
+-- (1, 'awesome-bird-301.pkl', 'np.float32', 18, ARRAY[12, 96], ARRAY[]::INTEGER[], ARRAY[12,48,96,168], true, 
+-- ARRAY['is_holiday', 'close_price', 'volume', 'is_weekend', 'count', 'hour_cos', 'hour_sin', 
+-- 'day_of_week_cos', 'day_of_week_sin', 'month_cos', 'month_sin', 'day_of_month_sin', 
+-- 'day_of_month_cos', 'year_normalized', 'close_lag12', 'close_lag96', 'ema_12_close_price',
+--  'ema_48_close_price', 'ema_96_close_price', 'ema_168_close_price']::TEXT[]);
 
 INSERT INTO model_config 
 (symbol_id, modelname, data_type, lookback, lags, window_sizes, span_sizes, active, features) 
 VALUES 
-(1, 'model.pkl', 'np.float32', 16, ARRAY[12, 168], ARRAY[]::INTEGER[], ARRAY[6, 12], true, 
-ARRAY['is_holiday', 'close_price', 'volume', 'is_weekend', 'count', 'hour_cos', 'hour_sin', 
-'day_of_week_cos', 'day_of_week_sin', 'month_cos', 'month_sin', 'day_of_month_sin', 
-'day_of_month_cos', 'year_normalized', 'close_lag12', 'close_lag168', 'ema_6_close_price', 
-'ema_12_close_price']::TEXT[]);
+(1, 'clean-mare-368.pkl', 'np.float32', 12, ARRAY[12, 96], ARRAY[]::INTEGER[], ARRAY[12,48,96,168], true, 
+ARRAY['is_holiday', 'close_price', 'volume', 'is_weekend', 'count', 'hour_cos', 'hour_sin',
+'day_of_week_cos', 'day_of_week_sin', 'month_cos', 'month_sin', 'day_of_month_sin',
+'day_of_month_cos', 'year_normalized', 'close_lag12', 'close_lag96', 'ema_12_close_price',
+'ema_48_close_price', 'ema_96_close_price', 'ema_168_close_price']::TEXT[]);
+
+
 
 -- currently not in use
 -- Prediction Data

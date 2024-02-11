@@ -135,3 +135,14 @@ def exponential_moving_average(data, span_sizes, columns=['close_price']):
         for span in span_sizes: 
             data['ema_'+str(span)+"_"+column] = data[column].ewm(span=span).mean()
     return data
+
+def bollinger_bands(data, days=7):
+    # calculating the rolling standard deviation
+    std_dev = data['close_price'].rolling(window=days*24).std()
+    data = simple_moving_average(data, window_sizes=[days*24]) # compute the moving average for a window of 10 days
+    # Calculate the upper and lower Bollinger Bands
+    colum_name = "sma_"+str(days*24)+"_close_price"
+    # Calculate the upper and lower Bollinger Bands
+    data['upper_bollinger_band'] = data[colum_name] + (std_dev * 2)
+    data['lower_bollinger_band'] = data[colum_name] - (std_dev * 2)
+    return data

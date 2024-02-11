@@ -95,3 +95,4 @@ pub async fn insert_trades(
         Err(err) => Err(RepositoryError::general_error(err.to_string())),
     }
 }
+ 

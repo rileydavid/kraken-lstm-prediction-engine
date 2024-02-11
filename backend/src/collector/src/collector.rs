@@ -139,7 +139,7 @@ async fn insert_trades(pool: &PgPool, trades: &Vec<Trade>) {
     let count = trades.len();
 
     let trades = trades
-        .into_par_iter()
+        .par_iter()
         .map(|trade| TradeModel::from(trade))
         .collect();
 
