@@ -1,7 +1,7 @@
 # Trading
 
 # Please refer to the User Guide:
-The User Guide outline the setup process and necessary steps for running this apllication.
+The User Guide outlines the setup process and necessary steps for running this apllication.
 The guide is locate in the documentation folder in the pdf "Bachelor_Thesis.pdf" 
 and can be found in Chapter 5.
 
