@@ -29,6 +29,6 @@ pub async fn upload(
         writer.flush().await.unwrap();
     }
 
-    return prepare_response(Ok("".to_owned()));
+    return prepare_response(Ok("Ok".to_owned()));
 }
 
