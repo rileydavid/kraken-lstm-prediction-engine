@@ -1,0 +1,28 @@
+\chapter{Introduction}
+
+This thesis is dedicated to the design of a robust system architecture, specifically tailored for the collection and pre-processing of time series financial data. The ultimate goal is to efficiently channel this processed data into a prediction model.
+It further endeavors to furnish users with straightforward access to these predictions and to generalize the system to accommodate integration with multiple models for various cryptocurrencies.
+
+\section{Motivation}
+The primary motivation behind this thesis is to lay the foundational groundwork for the subsequent creation of a sophisticated automated trading system. The system will leverage technical indicators and utilize the robust system architecture designed for collecting and pre-processing time series financial data. The intention is to harness this data, along with advanced prediction models, to inform and automate trading decisions for various cryptocurrency pairs, ultimately enhancing trading efficacy and decision-making precision.
+
+\section{Requirements}
+\begin{itemize}
+    \item \textbf{Data Collection via WebSocket Connection:} Establish a WebSocket connection to the Kraken cryptocurrency exchange \cite{kraken_homepage} for real-time financial data collection, ensuring a robust and reliable source of time series financial data.
+    
+    \item \textbf{Data Storage:} Implement an efficient storage system for time-series data, ensuring the data's integrity and accessibility for processing and analysis. 
+    
+    \item \textbf{Data Aggregation:} Process and aggregate individual trades into hourly OHLC (Open, High, Low, Close) statistics, including volume and trade count, to create a comprehensive dataset for analysis and prediction.
+    
+    \item \textbf{Model Development and Feature Engineering:} Support for in-depth model development with a focus on feature engineering for the creation of prediction models. This includes the sophisticated transformation of financial indicators into valuable features.
+    
+    \item \textbf{Training Prediction Models:} Training of prediction models using the engineered features. The framework should create or make use of a sophisticated system for tracking model training and performance and ensure the models are fine-tuned for effective forecasting of cryptocurrency market movements.
+    
+    \item \textbf{Object Store Integration:} An object store, such as S3, should be incorporated to serve as an artifact store for the created prediction models. This integration will facilitate the efficient storage, retrieval, and management of prediction models.
+    
+    \item \textbf{Model Execution Service:} Design and implement a backend service for executing prediction models.
+    
+    \item \textbf{Backend:} Design a Backend that serves the frontend with all the necessary data.
+
+    \item \textbf{Frontend:} Develop a user-friendly frontend that not only displays aggregated data and predictions but also allows users to manage WebSocket subscriptions for various cryptocurrency pairs, for example \texttt{ETH/USD}, \texttt{XRP/USD}, \texttt{BTC/USD}, enhancing user interaction and system adaptability.
+\end{itemize}

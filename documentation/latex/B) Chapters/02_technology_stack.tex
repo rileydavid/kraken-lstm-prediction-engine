@@ -1,0 +1,844 @@
+\chapter{Technology Stack}
+\section{Docker}
+\subsection{Introduction}
+Docker is an open-source platform for developing, shipping, and running applications. Docker enables the separation of the applications from the host system this enables it to deliver software quickly. By taking advantage of Docker's methodologies for shipping, testing, and deploying code, it can significantly reduce the delay between writing code and running it in production \cite{docker_get_started}.
+
+\paragraph{Advantages of Containerization with Docker \cite{iseLecture}:}
+\begin{itemize}
+    \item \textbf{Flexibility:} Complex applications can be easily containerized, showcasing Docker's ability to handle a wide range of application types.
+    \item \textbf{Lightweight:} Containers share the host system's kernel, making them more efficient and less resource-intensive than traditional virtual machines.
+    \item \textbf{Interchangeability:} Docker facilitates on-the-fly updates and upgrades, allowing for continuous integration and deployment.
+    \item \textbf{Portability:} Applications can be built locally, deployed to the cloud, and run consistently across various environments.
+    \item \textbf{Scalability:} Enables easy scaling of applications by allowing automatic distribution of container replicas across different environments.
+    \item \textbf{Stackability:} Services can be vertically stacked and dynamically adjusted, enhancing the manageability of multi-service applications.
+\end{itemize}
+
+\paragraph{Reason for Choosing Docker:} The choice of Docker for this project stems from its exceptional portability and scalability. Its ability to ensure consistent performance across diverse computing environments, coupled with the ease of application deployment and scaling, aligns seamlessly with the thesis's objectives of achieving robust operability and flexibility in hosting solutions. These containerization benefits make Docker an indispensable tool in the development and deployment phases of this thesis.
+
+\section{Timescale and PostgreSQL}
+\label{section:timescale_docker}
+
+Timescale \cite{Timescale} is an open-source time-series database optimized for fast ingestion and complex queries. It is built as an extension of PostgreSQL \cite{PostgreSQL}, a open source relational database, which is is highly performant and scalable. 
+
+\paragraph{Key Features of Timescale:}
+\begin{itemize}
+    \item \textbf{Optimized for Time-Series Data:} Timescale has been specifically designed for time-series data, it supports high-speed data ingestion, compression, and real-time analysis.
+    \item \textbf{Scalability:} Offers horizontal scalability, making it well-suited for handling large datasets and high-velocity data streams.
+    \item \textbf{Full SQL Support:} As an extension of PostgreSQL, Timescale offers full SQL support, enabling complex queries and easy integration with existing applications.
+    \item \textbf{Reliability:} Inherits the robustness and reliability of PostgreSQL, ensuring data integrity and security.
+    \item \textbf{Flexibility:} Allows for the use of PostgreSQL extensions and tools, making it a versatile choice for a wide range of applications.
+    \item \textbf{Ease of Use:} Simplifies time-series data management by providing functionalities like automated partitioning and efficient indexing. 
+\end{itemize}
+
+\paragraph{Alternatives:} \mbox{} \\ 
+\textbf{InfluxDB} \cite{InfluxDataDocs} is a high-performance time-series database, renowned for its speed in data ingestion and querying. However, it may not be the optimal choice for this project due to its specialized query language (InfluxQL) which has a considerable learning curve and lacks the flexibility and widespread support of SQL. This could pose integration challenges with existing systems that predominantly use SQL. \\
+
+\textbf{Prometheus} \cite{PrometheusDocs} is primarily a monitoring tool with time-series data capabilities. While it excels in real-time monitoring and alerting, it is not inherently designed for complex data analytics and lacks the relational data management features provided by SQL-based systems, potentially limiting its utility in diverse data analysis scenarios. \\
+
+\textbf{Apache Cassandra} \cite{ApacheCassandraDocs} offers high scalability and fault tolerance, making it suitable for very large datasets. However, its data model is significantly different from traditional SQL databases, which might complicate the integration with tools that expect a SQL-like interface. Its query capabilities are also less flexible compared to Timescale, especially for complex time-series data queries. \\
+
+\textbf{MongoDB} \cite{MongoDBDocs}, a general-purpose NoSQL database, which has recently added support for time-series data. While it offers a flexible schema and scalability, its time-series capabilities are not as mature or specialized as those in dedicated time-series databases. Additionally, the lack of native SQL support may limit its compatibility with traditional data analytics tools and workflows. \\
+
+These alternatives, while powerful in their respective domains, present challenges in terms of integration, query flexibility, and specialized time-series functionalities. InfluxDB, for instance, requires adapting to a unique query language, Prometheus is tailored more towards monitoring than complex analytics, Cassandra's non-SQL data model complicates integration, and MongoDB's time-series capabilities are just not mature enough. These limitations make them less suitable for the specific requirements and goals of this project. \\
+
+In contrast, the selection of Timescale for this project is driven by its seamless integration with MLflow, which utilizes PostgreSQL. This synergy provides a streamlined data flow and management system, facilitating effective data storage, retrieval, and analysis. Moreover, Timescale's continuous aggregates feature is ideally suited for efficiently processing high-frequency trade data into manageable forms, such as hourly aggregated OHLC (open-, high-, low-, close-price) statistics. The blend of these advanced features with PostgreSQL compatibility positions Timescale as the optimal choice for managing the financial data essential for this framework.
+
+\subsection{Docker Setup}
+The Docker service configuration (Listing \ref{lst:timescale_docker}) is used to setup \texttt{Timescale} \cite{Timescale}, which will be the core data storage system. The setup has the following specifications:
+
+\begin{itemize}
+  \item \textbf{Image:} The service uses \texttt{timescale/timescaledb-ha:pg16.1-ts2.13.1-all} as the base image. This image of Timescale uses the version 16 of PostgreSQL at it's core and version 2.13.1 for the Timescale Extension. 
+  \item \textbf{Ports:} The port defined by the environment variable \texttt{\$\{PG\_PORT\}} is exposed and mapped to the same port on the host, allowing external access to the database. The port is defined in the \texttt{config.env} (Section \ref{docker_config_env}).
+  \item \textbf{Networks:} The container is assigned a static IP address by the environment variable \texttt{\$\{TIMESCALE\_IP\}} (\texttt{172.1.0.10}) on a user-defined network named \texttt{network}. This network will be used for all services.
+  \item \textbf{Restart Policy:} The container is configured to always restart unless manually stopped, ensuring high availability.
+  \item \textbf{Environment Variables:} Several environment variables are set for the PostgreSQL configuration, including database name (\texttt{\$\{PG\_DATABASE\}}), user (\texttt{\$\{PG\_USER\}}), and password (\texttt{\$\{PG\_PASSWORD\}}). Timezone settings for both the host and PostgreSQL are set to \texttt{GMT+0}. The PostgreSQL data directory is specified as \\ \texttt{'/var/lib/postgresql/data/pgdata/'}, this is important as the database will be mapped to a local directory to ensure there is no data-loss when rebuilding the container.
+  \item \textbf{Volumes:} The configuration maps three volumes for data persistence and initialization:
+    \begin{itemize}
+      \item The Timescale data directory to a local directory \texttt{./data/timescale/}. This will hold the contents stored in the database.
+      \item A directory for importing data \texttt{/import/} , this is used for importing historical data.
+      \item An SQL script \texttt{create\_tables.sql} for database initialization placed in \\
+      \texttt{/docker-entrypoint-initdb.d/}, which PostgreSQL executes during container startup if the database has not yet been initialized. This creates the necessary tables and materialized views necessary for the systems core functionality (Section \ref{section:timescale_system_architecture}).
+    \end{itemize}
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption=Timescale Docker Setup, label={lst:timescale_docker}]
+timescaledb:
+    image: timescale/timescaledb-ha:pg16.1-ts2.13.1-all
+    container_name: timescaledb
+    ports:
+      - "${PG_PORT}:${PG_PORT}"
+    networks:
+      network:
+        ipv4_address: ${TIMESCALE_IP} # 172.1.0.10
+    restart: always
+    environment:
+      POSTGRES_DB: ${PG_DATABASE} # 'db'
+      POSTGRES_USER: ${PG_USER} # 'admin'
+      POSTGRES_PASSWORD: ${PG_PASSWORD} # 'password'
+      TZ: 'GMT+0'
+      PGTZ: 'GMT+0'
+      PGDATA: '/var/lib/postgresql/data/pgdata/'
+    volumes:
+      - ./data/timescale/:/var/lib/postgresql/data
+      - ./data/import/:/import/
+      - ./data/sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+\end{lstlisting}
+
+\subsection{Optimization Tools for Timescale}
+
+In addition to the basic configuration, there are specialized tools available that can further optimize the Timescale setup:
+
+\begin{itemize}
+  \item \textbf{timescaledb-tune:} This tool automates the tuning of the PostgreSQL configuration settings for Timescale, based on the system's available resources. It simplifies the process of configuring PostgreSQL for optimal performance with Timescale. More information and usage guidelines can be found on its GitHub repository \cite{TimescaleDBTune}.
+  \item \textbf{timescaledb-parallel-copy:} For efficient bulk data loading, this tool is invaluable. It enables parallelization of the data import processes using PostgreSQL's COPY command across multiple workers. This approach significantly speeds up the initial bulk loading of data into the database \cite{TimescaleDBParallelCopy}.
+\end{itemize}
+
+Utilizing these tools can enhance the performance and efficiency of Timescale, especially in environments with large volumes of data and high throughput requirements, although these tools have not been utilized in this setup.
+
+\section{PgAdmin}
+
+\textbf{pgAdmin} \cite{pgAdminWeb} is a prominent open-source administration tool for PostgreSQL databases, known for its effectiveness in development environments due to the following features:
+
+\begin{itemize}
+    \item \textit{Graphical Interface}: Provides an intuitive and user-friendly interface, crucial for efficient database management during development.
+    \item \textit{SQL Editor}: Features an advanced SQL query tool with syntax highlighting and auto-completion, enhancing coding efficiency.
+    \item \textit{Database Management}: Facilitates comprehensive database management capabilities including table operations and user management.
+    \item \textit{Web-Based Access}: Offers cross-platform support as a web-based application, ensuring flexibility in diverse development environments.
+    \item \textit{Visualization Tools}: Includes data visualization for analyzing query results and database statistics.
+    \item \textit{Scalability}: Capable of managing large databases, which is essential for complex and enterprise-level system development.
+    \item \textit{Data Export}: Provides the ability to export datasets efficiently. This feature was extensively used for extracting model training data, highlighting its utility in the data preparation phase.
+\end{itemize}
+
+\paragraph{Reason for Choosing PgAdmin:}
+These features made pgAdmin an integral tool during the system's development phase. Hosted in a Docker container, it provided flexibility and ease of integration, and could be seamlessly removed when transitioning to a productive environment. The ability to export datasets directly from pgAdmin significantly streamlined the process of preparing data for model training by making use of the data export feature.
+
+\subsection{Docker Setup}
+\begin{lstlisting}[language=bash, caption=PgAdmin Docker Setup, label={lst:pgadmin_docker}]
+pgadmin4: 
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    restart: always
+    ports:
+      - "${PGADMIN_PORT}:80"
+    networks:
+      network:
+        ipv4_address: ${PG_ADMIN_IP} # 172.1.0.11
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL} # 'some@email.com'
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD} # 'password'
+\end{lstlisting}
+
+The pgAdmin docker configuration (Listing \ref{lst:pgadmin_docker}) has the following key aspects: 
+
+\begin{itemize}
+  \item \textbf{Image:} The service uses \texttt{dpage/pgadmin4} as the Docker image, which is the latest official image for pgAdmin4.
+  \item \textbf{Container Name:} The container is named \texttt{pgadmin4}, facilitating easy identification and management within Docker.
+  \item \textbf{Restart Policy:} Set to \texttt{always}, this policy ensures that the pgAdmin4 container is automatically restarted in case of crashes or if the docker daemon restarts.
+  \item \textbf{Ports:} The container's port 80, where pgAdmin's web server runs, is mapped to a host port specified by the environment variable \texttt{\$\{PGADMIN\_PORT\}} (5050). This mapping allows access to pgAdmin through the designated host port and ensures that it does not conflict with port 80 on the host as this is a commonly used port. 
+  \item \textbf{Networks:} The container joins the same user-defined network named \texttt{network}, with a static IPv4 address assigned as \texttt{172.1.0.11}, which is configured using the environment variable \texttt{\$\{PG\_ADMIN\_IP\}}. This setup enables communication with other containers on the same network, in this case the timescale database.
+
+  \item \textbf{Environment Variables:}
+    \begin{itemize}
+      \item \texttt{PGADMIN\_DEFAULT\_EMAIL}: Sets the default email for the pgAdmin login, sourced from the \texttt{config.env} file (Section \ref{docker_config_env}), and is set to \texttt{some@email.com}.
+      \item \texttt{PGADMIN\_DEFAULT\_PASSWORD}: Determines the default password for pgAdmin login, again taken from the \texttt{config.env} file, with the default value being \texttt{password}.
+    \end{itemize}
+\end{itemize}
+
+This Docker configuration provides a streamlined and efficient approach to deploying pgAdmin, ensuring easy access and compatibility with the PostgreSQL database, which is also containerized on the same network. 
+
+
+\section{MLflow}
+\label{section:mlflow_docker}
+
+
+
+\subsubsection{MlFlow}
+
+\textbf{MLflow} \cite{MLflowWeb} is an open-source platform designed for the machine learning lifecycle, including experimentation, reproducibility, and deployment. Some of the key features are: 
+
+\begin{itemize}
+    \item \textit{Experiment Tracking}: MLflow provides robust tracking of experiments. It records and compares parameters, code versions, metrics, and artifacts, making it easier to keep track of various trials and models.
+    \item \textit{Model Versioning}: Offers version control for machine learning models, allowing for easy tracking of iterations and improvements over time.
+    \item \textit{Reproducibility}: By tracking each step in the machine learning process, MlFlow ensures experiments are reproducible, which is crucial for validating and sharing results.
+    \item \textit{Collaboration}: Facilitates collaboration among team members by providing a central repository for experiments, promoting transparency and collective analysis.
+    \item \textit{Integration with ML Libraries}: Seamlessly integrates with most machine learning and deep learning frameworks, enhancing its versatility in various ML projects.
+    \item \textit{Deployment Tools}: Includes tools to simplify the deployment of models across diverse platforms, ensuring a smooth transition from development to production.
+\end{itemize}
+
+
+\paragraph{Alternatives:} \mbox{}\\
+\textbf{TensorBoard} \cite{TensorBoardWeb} is an integrated visualization toolkit developed for TensorFlow. It specializes in providing insights into machine learning experiments, such as visualizing metrics like loss and accuracy, and displaying detailed graphs of the model. TensorBoard excels in its deep integration with TensorFlow, offering intuitive and detailed visualizations for TensorFlow projects. \\
+
+\textbf{Comet.ml} \cite{CometMLWeb} offers a comprehensive platform for tracking ML experiments, visualizing data, and managing the machine learning lifecycle. It is known for its robust feature set that includes experiment tracking, model optimization, and dataset versioning. Comet.ml stands out for its extensive collaboration features, making it ideal for teams working on complex machine learning projects. \\
+
+\textbf{Guild AI} \cite{GuildAIWeb} is an open-source tool that focuses on simplifying and automating the experiment tracking and model development process. It emphasizes reproducibility and version control without requiring significant changes to existing code. Guild AI is suitable for those looking for an easy-to-use tool that integrates seamlessly into the machine learning workflow. \\
+
+\textbf{MLflow} emerges as the superior choice for model tracking and management, especially if there is already an existing PostgreSQL installation available. 
+The key aspects are: 
+\begin{enumerate}
+    \item \textbf{Integration with PostgreSQL:} MLflow provides seamless integration with PostgreSQL. This allows the existing database infrastructure to store metadata and artifacts, thereby avoiding the need for another database system or the reliance on local storage. Such an integration is not only efficient but also enhances data security and access control.
+    \item \textbf{Open Source and Established:} Being an open-source platform, MLflow offers transparency and a wide community support. Its established presence in the industry ensures reliability and continuous development, a crucial aspect for long-term projects.
+    \item \textbf{S3 Model Storage Compatibility:} MLflow excels in its ability to store models in S3, catering to cloud-based storage requirements. This compatibility with S3 ensures that MLflow can efficiently handle large-scale model storage and retrieval, which is a capability not uniformly matched by alternatives such as TensorBoard, Comet ML, and Guild AI.
+\end{enumerate}
+
+In conclusion, the synergy between MLflow's PostgreSQL integration, its open-source nature, and its established reputation make it an unrivaled choice for model tracking and management, especially in environments prioritizing centralized, non-localized data storage solutions.  \\
+
+
+\subsection{Docker Setup}
+\subsubsection{Dockerfile for MlFlow}
+The Dockerfile (Listing \ref{lst:mlflow_dockerfile}) is designed to set up an environment suitable for running MLflow with PostgreSQL and AWS S3 integration. The specific instructions are explained below:
+
+\begin{itemize}
+    \item \textbf{Base Image:} \verb|FROM python:3.10-slim| \\
+    The Dockerfile starts from the \verb|python:3.10-slim| image. This image provides a lightweight Python 3.10 environment, which is ideal for Python-based applications while keeping the overall size of the image minimal.
+
+    \item \textbf{Installing Dependencies:} \\
+    \verb|RUN apt-get update && apt-get install -y curl| \\
+    The image is updated and \verb|curl| is installed. Curl is a versatile tool used for transferring data with various protocols and is commonly used in installation scripts.
+
+    \item \textbf{Installing Python Packages:} \\
+    \verb|RUN pip install mlflow[extras] psycopg2-binary boto3 cryptography| \\
+    This command installs several key Python packages:
+    \begin{itemize}
+        \item \verb|mlflow[extras]|: Installs MLflow with additional dependencies that provide extended functionalities.
+        \item \verb|psycopg2-binary|: This package is essential for enabling MLflow to establish a connection with the PostgreSQL database. 
+        \item \verb|boto3|: The AWS SDK for Python, used for interacting with AWS services like S3.
+        \item \verb|cryptography|: A package that provides cryptographic recipes and primitives. It is often required for secure data handling.
+    \end{itemize}
+
+    \item \textbf{Exposing Port:} The \verb|EXPOSE 5000| instruction exposes port 5000 in the Docker container, which is the default port that MLflow uses to run its server. Exposing this port allows network access to the MLflow server from outside the container.
+\end{itemize}
+
+This Dockerfile efficiently sets up an environment for MLflow, facilitating its integration with PostgreSQL and AWS S3, while ensuring that all necessary dependencies are installed for optimal functionality.
+
+\begin{lstlisting}[language=bash, caption=Dockerfile MlFlow,  label={lst:mlflow_dockerfile}]
+FROM python:3.10-slim
+
+RUN apt-get update && apt-get install -y curl
+RUN pip install mlflow[extras] psycopg2-binary boto3 cryptography 
+
+EXPOSE 5000
+\end{lstlisting}
+
+
+\subsubsection{Docker Compose}
+
+The Docker service configuration (Listing \ref{lst:mlflow_docker}) sets up an MLflow server with specific environment settings and dependencies. The key elements of this configuration are explained below:
+
+\begin{itemize}
+    \item \textbf{Restart Policy:} \\
+    \verb|restart: always| \\
+    This setting ensures that the MLflow service will always restart automatically if it stops for any reason, such as a crash or system reboot.
+
+    \item \textbf{Building the Image:} \\
+    \verb|build: ./mlflow| \\
+    This command specifies that the Docker image for the MLflow server should be built from the Dockerfile located in the \texttt{./mlflow} directory (Listing \ref{lst:mlflow_dockerfile}).
+
+    \item \textbf{Image and Container Naming:} \\
+    \verb|image: mlflow_server| \\
+    \verb|container_name: mlflow_server| \\
+    These settings define the name of the Docker image as \texttt{mlflow\_server} and also set the name of the container to \texttt{mlflow\_server}.
+
+    \item \textbf{Dependency on other Services:} \\
+    \verb|depends_on: - timescaledb| \\
+    Ensures that the MLflow service only starts after the \texttt{timescaledb} service has started. Otherwise MlFlow will encounter connection issues (errors) until timescale has started successfully.
+
+    \item \textbf{Port Configuration:} \\
+    \verb|ports: - "${MLFLOW_PORT}:5000"| \\
+    The MLflow server's port 5000 is mapped to a host port specified by the environment variable \texttt{\$\{MLFLOW\_PORT\}}, allowing for external access.
+
+    \item \textbf{Network Configuration:} \\
+    \verb|networks: network: ipv4_address: ${MLFLOW_IP} # 172.1.0.13| \\
+    The MLflow service is assigned a static IP address \texttt{172.1.0.13}, which is set using the environment variable \texttt{\$\{MLFLOW\_IP\}} within the user-defined network \texttt{network}. Therefor the communication with other services is possible (e.g., timescale, minio).
+
+    \item \textbf{Environment Variables:} \\
+    Several environment variables are set for AWS credentials, S3 endpoint configuration, and to handle TLS for S3 connections. These are critical for enabling MLflow to interface with an S3-compatible storage service for model artifacts.
+
+    \item \textbf{Volumes:} \\
+    \verb|volumes: - ./data/mlruns/models:/data| \\
+    This command maps a volume from the host \texttt{./data/mlruns/models} to the container \texttt{/data} and is used for persistent storage of MLflow data.
+
+    \item \textbf{Command to Start MLflow Server:} \\
+    The \texttt{command} specifies the parameters to start the MLflow server, including the URI for the PostgreSQL database, which is used to store experiment and model metadata, the server's host address, artifact serving option, and the default root location for artifacts in an S3 bucket.
+\end{itemize}
+
+The configuration effectively sets up an MLflow server, integrating it with Timescale for metadata storage and AWS S3, in this case MinIO (Section \ref{section:minio}), for storing model artifacts, making it a comprehensive setup for MLflow-based machine learning workflows.  \newpage
+
+\begin{lstlisting}[language=bash, caption=Docker Compose MlFlow, label={lst:mlflow_docker}]
+mlflow:
+    restart: always
+    build: ./mlflow
+    image: mlflow_server
+    container_name: mlflow_server
+    depends_on:
+      - timescaledb
+    ports:
+      - "${MLFLOW_PORT}:5000"
+    networks:
+      network:
+        ipv4_address: ${MLFLOW_IP} # 172.1.0.13
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
+      - MLFLOW_S3_IGNORE_TLS=true
+    volumes:
+      - ./data/mlruns/models:/data
+    command: >
+      mlflow server 
+        --backend-store-uri postgresql://${PG_USER}:${PG_PASSWORD}@${TIMESCALE_IP}:${PG_PORT}/${PG_DATABASE_MLFLOW} 
+        --host 0.0.0.0 
+        --serve-artifacts 
+        --default-artifact-root s3://${MLFLOW_BUCKET_NAME}
+\end{lstlisting}
+
+
+% maybe this should be a subsection of MLFlow 
+\section{MinIO}
+\label{section:minio}
+
+
+\subsubsection{MinIO}
+
+\textbf{MinIO} \cite{MinIODocs} is an open-source high performance and distributed object storage system. It plays a crucial role in the machine learning infrastructure, particularly with MLflow and as a model storage solution.
+
+\begin{itemize}
+    \item \textit{High-Performance Storage}: Offers high-speed, scalable, and secure storage, ideal for handling large datasets and machine learning models.
+    \item \textit{Compatibility with MLflow}: Serves as a dependable backend storage for MLflow, facilitating efficient experiment tracking and model versioning.
+    \item \textit{S3-Compatible API}: Provides an Amazon S3-compatible API, ensuring easy integration with existing tools and cloud-based services.
+    \item \textit{Data Security}: Features robust security mechanisms, including encryption and access management, essential for sensitive data and model security.
+    \item \textit{Scalability}: Easily scales to accommodate growing data and model storage needs, making it suitable for both development and production environments.
+    \item \textit{Data Redundancy and Reliability}: Ensures high availability and data redundancy, crucial for maintaining uninterrupted access to models and data.
+\end{itemize}
+
+\paragraph{Alternatives:} \mbox{} \\ 
+
+\textbf{Amazon Simple Storage Service (S3)} \cite{AmazonS3Docs} is a widely used object storage service provided by Amazon Web Services (AWS). It offers high scalability, data availability, and security. However, for projects requiring cost-effective solutions or data sovereignty, relying on a commercial cloud provider like Amazon S3 might not be ideal due to potential higher costs and data residency concerns. \\
+
+\textbf{Google Cloud Storage:} Google Cloud Storage \cite{GoogleCloudStorageDocs} is another major cloud storage service, known for its high performance and integration with Google Cloud's suite of services. While it provides robustness and advanced features, the costs and complexity of integration with non-Google services might be prohibitive. \\
+
+\textbf{Microsoft Azure Blob Storage} \cite{AzureBlobStorageDocs} is a scalable and secure object storage solution. It excels in enterprise environments, especially those already using other Microsoft Azure services. However, its cost and potential complexity in integration with open-source tools could be a drawback for projects with limited budgets or those heavily relying on open-source ecosystems. \\
+
+\textbf{Ceph} \cite{CephDocs} is an open-source storage platform that provides scalable object, block, and file storage. While it offers flexibility and is cost-effective, its setup and maintenance are more complex compared to MinIO, which can be a significant factor for smaller teams with limited resources or expertise in storage systems. \\
+
+These alternatives, each with their distinct advantages, also come with challenges that might not align with the specific needs of this project. Amazon S3, Google Cloud Storage, and Azure Blob Storage, while robust, might impose higher costs and complexity, particularly in projects emphasizing open-source solutions or data sovereignty. Ceph, albeit open-source and versatile, requires a more complex setup and maintenance efforts. \\
+
+In contrast, MinIO was chosen for its simplicity, high performance, and compatibility with the S3 API, making it well-suited for a variety of storage needs. Its lightweight nature allows for easy deployment and scaling, and its open-source model ensures cost-effectiveness and adaptability. Furthermore, MinIO's compatibility with a wide range of existing applications and tools, particularly those in the MLflow ecosystem, streamlines integration and operational efficiency. These qualities make MinIO an optimal choice for this project's storage requirements, balancing performance, ease of use, and cost considerations.
+
+\subsection{Docker Setup}
+The Docker Compose file (Listing \ref{lst:minio_docker}) is configured to set up and run a MinIO server (S3 storage service). A breakdown of the key elements in this configuration can be found below:
+
+\begin{itemize}
+    \item \textbf{Restart Policy:} \\ \verb|restart: always| \\ This directive ensures that the container restarts automatically if it stops.
+    \item \textbf{Image:} \\ \verb|minio/minio| \\
+    Specifies the MinIO Docker image to be used for the container.
+    \item \textbf{Container Name: } \\ \verb|mlflow_minio| \\ 
+    Sets a custom name for the container.
+    \item \textbf{Volumes:} \\ \verb|./data/minio:/data| \\ 
+    Mounts a volume from the host system \texttt{./data/minio} to the container \texttt{/data}, which is used for persistent storage of the MinIO data.
+    \item \textbf{Ports:} \\ \verb|"${MINIO_PORT}:9000", "${MINIO_CONSOLE_PORT}:9001"| \\
+    Maps the MinIO service port and console port from the container to the host. These ports are set through environment variables.
+    \item \textbf{Networks:}  Specifies the network configuration, which assigns a static IPv4 address \texttt{172.1.0.12} using the environment variable \verb|${MINIO_IP}|. Note that this service is on the same network as the other services.
+    \item \textbf{Environment:} Defines several environment variables used by MinIO, such as root user, root password, address, port, HTTPS usage, and console address.
+    \item \textbf{Command:} \\ \verb|server /data| \\ Is the command that is executed inside the container, which starts the MinIO server and points it to use the \verb|/data| directory for storage.
+\end{itemize}
+
+This configuration is an essential part of setting up a MinIO server within a Docker container, providing object storage services for applications such as MLflow.
+
+\begin{lstlisting}[language=bash, caption=Docker Compose Minio, label={lst:minio_docker}]
+s3:
+    restart: always
+    image: minio/minio
+    container_name: mlflow_minio
+    volumes:
+      - ./data/minio:/data
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    networks:
+      network:
+        ipv4_address: ${MINIO_IP} # 172.1.0.12
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_ADDRESS=${MINIO_ADDRESS}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_STORAGE_USE_HTTPS=${MINIO_STORAGE_USE_HTTPS}
+      - MINIO_CONSOLE_ADDRESS=${MINIO_CONSOLE_ADDRESS}
+    command: server /data
+\end{lstlisting}
+
+\section{Backend}
+
+\subsubsection{Rust Ecosystem}
+
+The Rust ecosystem is rapidly growing, bringing together a large collection of libraries and tools that facilitate efficient backend development. Its package manager and build system, Cargo, simplifies dependency management and streamlines the build process. The availability of high-quality crates (Rust packages) allows developers to integrate functionality such as web server frameworks, database connectors, and an asynchronous runtime with relative ease.
+\begin{itemize}
+    \item \textbf{Resource Footprint and Performance:} Rust is known for its low resource footprint and high performance, comparable to that of C and C++. It achieves this by providing fine-grained control over memory usage and system resources without the overhead of a garbage collector. This makes Rust particularly suited for services where performance and resource efficiency are paramount.
+    \item \textbf{Memory Safety Guarantees:} One of Rust’s most significant advantages is its promise of memory safety. Rust’s ownership model, along with its borrow checker, ensures that programs are free from common bugs such as null pointer dereferences, buffer overflows, and race conditions in concurrent code. This leads to a reduction in runtime errors and security vulnerabilities, a crucial aspect for any system, especially those handling privacy sensitive data.
+    \item \textbf{Interfacing with Python for Machine Learning:} While Rust provides the foundation for a solid and efficient backend, Python remains a dominant language in the machine learning domain due to its rich ecosystem of data science libraries and tools. Rust offers the possibility to interface seamlessly with Python, which allows for the combination of Rust's performance and safety with Python's expansive machine learning capabilities. Libraries such as PyO3 \cite{PyO3PythonFromRust} allow Rust applications to embed Python interpreters or build native Python modules, enabling a symbiotic relationship where computationally intensive tasks are handled by Rust, while Python focuses on higher-level algorithmic logic.
+\end{itemize}
+
+In conclusion, Rust presents itself as a modern, reliable, and efficient choice for backend development. Its combination of safety features, performance, and interoperability with Python creates a compelling case for its adoption in the system architecture of machine learning platforms.
+
+
+\subsection{Docker Setup}
+The backbone of this thesis's architecture is its robust backend, acting as a pivotal turntable for all services. Developed in Rust the backend serves as a critical bridge linking the user interface with the underlying data storage, managed by Timescale, and the model execution service. A noteworthy aspect of this implementation is the isolated connectivity between the frontend and other components. The frontend is exclusively connected to the backend, ensuring no direct interaction with either the model service or the database. This design choice not only encapsulates the system's complexity but also enhances security and maintainability. \\
+
+The Docker configuration makes use of the multi-stage builds, which allow for an optimized compilation of the Rust source code. Resulting in a leaner final image, devoid of unnecessary build-time dependencies and thus enhancing the deployment efficiency. The dockerized backend seamlessly integrates with the frontend and other services, ensuring a cohesive and responsive system architecture. In summary, this part of the technology stack forms the bedrock of a reliable, scalable, and maintainable backend infrastructure for the project.
+
+\subsubsection{Dockerfile}
+\paragraph{Building Phase} \mbox{} \\
+The building phase (Listing \ref{lst:backend_builder_dockerfile}) is separated into the following steps:
+\begin{enumerate}
+    \item Pulling the latest rust docker image (Line 4)
+    \item Updating dependencies (apt) and installing tools that are necessary for compiling the source code (Line 6-7)
+    \item Adding the correct target using the rustup command (Line 8) 
+    \item Updating certificates (Line 9)
+    \item Setting working directory (Line 11) 
+    \item Copying source code into the container (Line 13)
+    \item Compiling the backend using cargo build (Line 15)
+\end{enumerate}
+
+\begin{lstlisting}[language=bash, caption=Dockerfile Builder for Backend, label={lst:backend_builder_dockerfile}]
+#####################################################################
+## Builder
+#####################################################################
+FROM rust:latest AS builder
+
+RUN apt update && apt install -y musl-tools musl-dev
+RUN apt-get install -y pkg-config make g++ libssl-dev 
+RUN rustup target add x86_64-unknown-linux-musl
+RUN update-ca-certificates
+
+WORKDIR /backend
+
+COPY ./ .
+
+RUN cargo build --target x86_64-unknown-linux-musl --release --jobs 8
+\end{lstlisting}
+
+\paragraph{Final Image Phase}
+After the building phase  is complete the final image (Listing \ref{lst:backend_final_dockerfile}) is created: 
+\begin{enumerate}
+    \item Pulling the latest alpine image (Linux distribution with a very small footprint) (Line 20)
+    \item Setting the working directory (Line 22)
+    \item Copying the compiled backend (executable) from the builder (Line 24)
+    \item Copying the production .env file (Line 26)
+    \item Exposing the port 8000 (Line 28) 
+    \item The starting command is defined, which is essential to start the service when the final image is started (Line 30) 
+\end{enumerate}
+
+
+\begin{lstlisting}[language=bash, caption=Dockerfile Final Image for Backend, label={lst:backend_final_dockerfile}]
+#####################################################################
+## Final image
+#####################################################################
+FROM alpine
+
+WORKDIR /backend
+
+COPY --from=builder /backend/target/x86_64-unknown-linux-musl/release/server ./
+#copying the .env file for docker 
+COPY --from=builder /backend/env/.env ./
+
+EXPOSE 8000
+
+CMD ["/backend/server"]
+\end{lstlisting}
+
+\subsubsection{Docker Compose}
+
+The Docker Compose file (Listing \ref{lst:backend_docker_compose}) for the backend service is designed to build and run the backend application. 
+
+\begin{lstlisting}[language=bash, caption=Docker Compose Backend, label={lst:backend_docker_compose}]
+backend: 
+    build: ./backend
+    container_name: backend
+    restart: always
+    depends_on:
+      - timescaledb
+    ports:
+      - "${BACKEND_PORT}:8000"
+    volumes:
+      - ./data/import/:/import/
+    networks:
+      network:
+        ipv4_address: ${BACKEND_IP} # 172.1.0.14
+    environment:
+      - WEBSERVER_IP=${BACKEND_IP}
+      - WEBSERVER_PORT=${BACKEND_PORT}
+      - MODELSERVICE_ENDPOINT=http://${MODELSERVICE_IP}:${MODELSERVICE_PORT}/${MODELSERVICE_ENDPOINT}
+      - DATABASE_URL=postgres://${PG_USER}:${PG_PASSWORD}@${TIMESCALE_IP}:${PG_PORT}/${PG_DATABASE}
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Build:} \\ \verb|./backend| \\ Specifies the location of the Dockerfile and associated files for building the backend container image (Listing \ref{lst:backend_builder_dockerfile} \& \ref{lst:backend_final_dockerfile}).
+    \item \textbf{Container Naming:} \\ \verb|backend| \\ Sets the name of the container to \texttt{backend} for easier identification.
+    \item \textbf{Restart Policy:} \\ \verb|always| \\ Ensures that the container will restart automatically if it stops for any reason.
+    \item \textbf{Dependency on another Service} \\ \verb|timescaledb| \\ Indicates that the backend service depends on the \texttt{timescaledb} service, ensuring that \texttt{timescaledb} starts before the backend.
+    \item \textbf{Ports:} \\ \verb|"${BACKEND_PORT}:8000"| \\ Maps the internal port 8000 of the container to an external port specified by the \texttt{\$\{BACKEND\_PORT\}} environment variable.
+    \item \textbf{Volumes:} \\ \verb|./data/import/:/import/| \\ Mounts a volume from the host system \texttt{./data/import/} to the container \texttt{/import/}. It is used for data import operations within the backend service. Timescale uses the same directory, this allows the backend to make use of the PostgreSQL COPY command for importing historical data. 
+    \item \textbf{Networks:} \\ Specifies the network configuration for the container, including setting a static IPv4 address \texttt{172.1.0.14} to ensure consistent networking. This is configured using the environment variable \texttt{\$\{BACKEND\_IP\}}.
+    \item \textbf{Environment Variables:} \\ Sets critical environment variables for the backend service, including endpoints for the model service, database URL, and webserver configurations.
+\end{itemize}
+
+Vital for deploying the backend service in a Dockerized environment this configuration provides the essential tools such as build context, dependency management, port mapping, volume mounting for data imports, network configuration and all the necessary environment variables.
+
+
+\section{Model Service}
+Central to this project's functionality is the Model Service, a sophisticated component designed for data preparation and execution of machine learning models. The service is crucial as it processes input data, runs predictive models, and returns valuable insights in the form of predictions to the backend.\\
+
+The core of the Model Service is built using Python, renowned for its extensive libraries and frameworks in data science and machine learning. To encapsulate the service and ensure a consistent and lightweight execution environment a Python slim image has been utilized. This choice not only reduces the overall footprint of the service but also aligns with best practices in deploying Python applications in production environments. \\
+
+The Docker setup for the Model Service is configured as follows:
+
+\begin{itemize}
+  \item \textbf{Base Image:} The Python slim Docker image provides a minimalistic yet fully-functional Python runtime environment. This image is optimized for size and performance, ideal for the model execution needs.
+  \item \textbf{Gunicorn Integration:} To manage the web server requirements of the Model Service an efficient and robust WSGI HTTP (Web Server Gateway Interface) server for Python applications, Gunicorn \cite{GunicornWebsite} has been employed. It offers seamless handling of concurrent requests, making it well-suited for high-load scenarios.
+  \item \textbf{Service Isolation:} Similar to the backend setup, the Model Service runs in its own Docker container. This isolation facilitates independent scaling and deployment, ensuring minimal impact on other services.
+\end{itemize}
+
+In conclusion, the Model Service, with its Python-based architecture, Docker containerization, and Gunicorn web server integration, forms an integral part of the infrastructure. 
+
+\subsection{Docker Setup}
+\subsubsection{Dockerfile}
+
+The Dockerfile (Listing \ref{lst:model_service_dockerfile}) outlines the steps for creating a Docker image for the model service. Each command in the Dockerfile has a specific purpose, as detailed below:
+
+\begin{itemize}
+    \item \textbf{FROM python:3.10.13-slim}: This line specifies the base image to be used. In this case, it is a slim version of Python 3.10.13, which is a lightweight image containing the minimal packages necessary to run Python.
+
+    \item \textbf{WORKDIR}: Sets the working directory inside the container to \texttt{/usr/src/app}. All subsequent commands will be executed in this directory.
+
+    \item \textbf{COPY . /usr/src/app}: Copies everything from the current directory in the host (where the Dockerfile is located) into the \texttt{/usr/src/app} directory in the container.
+
+    \item \textbf{RUN pip install -{}-upgrade pip}: Upgrades pip, Python's package installer, inside the container to ensure that the latest version is used.
+
+    \item \textbf{RUN pip install -{}-no-cache-dir -r requirements.txt}: Installs the Python dependencies specified in \texttt{requirements.txt} (Listing \ref{lst:model_service_requirements}) without using the cache directory, to reduce the image size.
+
+    \item \textbf{RUN mkdir model}: Creates a directory named \texttt{model} inside the container, which is used for temporary model storage.
+
+    \item \textbf{CMD ["gunicorn", "-b", "0.0.0.0:7000", "wsgi:app"]}: Sets the default command to be executed when the container starts. In this case, it launches a Gunicorn server hosting the application defined in the \texttt{wsgi:app} module. The server listens on port 7000, and \texttt{0.0.0.0} ensures it's bound to all network interfaces inside the container. 
+\end{itemize}
+
+This Dockerfile is structured to provide a lightweight, efficient, and secure environment for running a Python web application, with dependencies managed via pip and serving the application using Gunicorn. \\
+
+\begin{lstlisting}[language=bash, caption=Model Service Dockerfile, label={lst:model_service_dockerfile}]
+FROM python:3.10.13-slim 
+
+WORKDIR /usr/src/app
+
+# copy directory contents into the container
+COPY . /usr/src/app
+
+RUN pip install --upgrade pip
+# install requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN mkdir model # temporary model storage
+
+# launch model service 
+CMD ["gunicorn", "-b", "0.0.0.0:7000", "wsgi:app"]
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash, caption=Dependency Requirements Model Service, label={lst:model_service_requirements}]
+python-dotenv
+pandas
+numpy
+holidays
+requests
+boto3 
+flask
+cloudpickle
+scikit-learn
+scipy==1.9.3
+tensorflow==2.14.0
+gunicorn
+\end{lstlisting}
+
+\subsubsection{Docker Compose}
+
+The Docker Compose file (Listing \ref{lst:model_service_docker_compose}) configures the deployment of the prediction model execution service. Each directive plays a specific role in this configuration:
+
+\begin{itemize}
+    \item \textbf{Build:} \\ \verb|./prediction-model-execution| \\ Specifies the directory containing the Dockerfile and related files which are necessary to build the image for the model service. This directive tells Docker to build the image using the Dockerfile in the \texttt{./prediction-model-execution} directory.
+
+    \item \textbf{Container Naming:} \\ \verb|modelservice| \\ Sets a custom name for the container and is used to identify the container on the Docker network.
+
+    \item \textbf{Restart Policy:} \\ \verb|always| \\ Ensures that the container restarts automatically if it stops. If the container stops for any reason other than being explicitly stopped, it will restart.
+
+    \item \textbf{Ports:} \\ \verb|"${MODEL_EXECUTION_PORT}:7000"| \\ Maps the port 7000 from inside the container to a host port defined by the \texttt{\$\{MODEL\_EXECUTION\_PORT\}} environment variable. This allows external access to the service running inside the container.
+
+    \item \textbf{Networks:} Configures the network settings for the container.  Assigns the container to the user-defined network named \texttt{network}, while also setting a static IPv4 address. The specific address is defined by the \texttt{\$\{MODELSERVICE\_IP\}} environment variable in this case \texttt{172.1.0.15}.
+
+     \item \textbf{Environment Variables:} Configures environment variables critical for the model service, including AWS credentials for S3 storage, S3 endpoint URL, bucket name, and the backend service endpoint.
+\end{itemize}
+
+The configuration enables the deployment of the model service in a Dockerized environment with specific network settings, ensuring consistent and predictable networking, and allowing for scalable and maintainable service management. \\
+
+\begin{lstlisting}[language=bash, caption=Model Service Docker Compose, label={lst:model_service_docker_compose}]
+modelservice: 
+    build: ./prediction-model-execution
+    container_name: modelservice
+    restart: always
+    ports:
+      - "${MODELSERVICE_PORT}:7000"
+    networks:
+      network:
+        ipv4_address: ${MODELSERVICE_IP} # 172.1.0.15
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY}
+      - S3_ENDPOINT_URL=http://${MINIO_IP}:${MINIO_PORT}
+      - S3_BUCKET=${MLFLOW_BUCKET_PROD}
+      - BACKEND_ENDPOINT=http://${BACKEND_IP}:${BACKEND_PORT}/
+\end{lstlisting}
+
+\section{Frontend}
+
+
+\subsubsection{Angular 17 and Node.js}
+\textbf{Angular 17} is at the forefront of modern web application frameworks, offering a robust set of tools and features for developing comprehensive web applications. The frontend leverages several key aspects of Angular:
+
+\begin{itemize}
+    \item \textbf{Component-Based Architecture}: Facilitates building reusable UI components, enhancing the maintainability and testability of the frontend.
+    \item \textbf{Two-Way Data Binding}: Ensures a seamless synchronization between model and view components for efficient data management.
+    \item \textbf{Dependency Injection}: Angular's dependency injection system simplifies the development and testing process by efficiently managing dependencies.
+    \item \textbf{Routing and Navigation}: Empowers the creation of navigable and interactive single-page applications (SPAs) with powerful routing capabilities.
+    \item \textbf{Expansive Ecosystem}: Angular has a large ecosystem, including a wide range of libraries, tools, and community support, which enhances development capabilities and offers solutions for a variety of use cases.
+\end{itemize}
+\mbox{}\\
+\textbf{Node.js} is a important part of the frontend ecosystem, particularly in the development environment, offering:
+
+\begin{itemize}
+    \item \textbf{Efficient JavaScript Execution}: Facilitates server-side JavaScript execution, enabling consistent use of JavaScript throughout the stack.
+    \item \textbf{Package Management}: With npm, Node.js's package manager, the management and installation of Angular and other frontend-related packages are streamlined.
+    \item \textbf{Development Tools}: Supports a wide array of development tools and plugins that enhance the development process, including testing, linting, and building.
+\end{itemize}
+
+In conclusion, Angular 17 and Node.js for frontend development stand out not only for their powerful features but also for the vibrant communities supporting these technologies. The wealth of information, resources, and community-driven initiatives make this duo an excellent choice for building modern, scalable, and maintainable web applications.
+
+\subsection{Docker Setup}
+
+The Docker-based deployment of the frontend is designed to be lightweight and efficient. Alpine Linux, known for its minimal footprint, has been chosen as the base image for the Docker container. The docker image makes use of Nginx \cite{NGINX}, a open source web server software that performs reverse proxy, load balancing, email proxy and HTTP cache services, which is used route requests to the frontend correctly. The frontend is a crucial component in the overall system, bridging the gap between the backend services and the end-users through a responsive and intuitive user interface.
+
+\subsubsection{Dockerfile}
+
+The Dockerfile (Listing \ref{lst:frontend_builder_dockerfile} \& \ref{lst:frontend_final_image_dockerfile}) used to build the frontend is structured in two stages, a build stage and a final image stage, that creates a Docker container for the Angular application served by Nginx.
+
+\paragraph{Build Stage (Builder)}
+
+\begin{itemize}
+    \item \textbf{Base Image}: Starts with \texttt{node:20-alpine} as the base image, providing Node.js on an Alpine Linux distribution.
+    \item \textbf{Directory Setup}: Creates a directory \texttt{/app} inside the container to hold the application files.
+    \item \textbf{Working Directory}: Sets \texttt{/app} as the working directory.
+    \item \textbf{Copying Files}: 
+    \begin{itemize}
+        \item Copies \texttt{package.json} and \texttt{angular.json} to \texttt{/app}.
+        \item Copies the entire contents of the current directory into \texttt{/app}.
+        \item Copies a custom Nginx configuration file from \texttt{nginx/nginx.conf} to \texttt{/app/nginx.conf}.
+    \end{itemize}
+    \item \textbf{NPM Installations}: 
+    \begin{itemize}
+        \item Runs \texttt{npm install -{}-legacy-peer-deps}.
+        \item Installs Angular CLI version 17.0.7 and \texttt{@angular-devkit/build-angular@17.0.7} globally.
+    \end{itemize}
+    \item \textbf{Angular Build}:  By executing this command the frontend is built. \\
+    \texttt{ng build ---configuration=production ---output-path=/dist/frontend/browser ---verbose}.
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption=Frontend Builder Dockerfile, label={lst:frontend_builder_dockerfile}]
+#####################################################################
+## Builder
+#####################################################################
+FROM node:20-alpine as build-step
+
+RUN mkdir -p /app
+
+WORKDIR /app
+
+COPY package.json /app
+COPY angular.json /app
+COPY . /app
+COPY /nginx/nginx.conf /app/nginx.conf
+
+RUN npm install --legacy-peer-deps  
+RUN npm install -g @angular/cli@17.0.7
+RUN npm install -g @angular-devkit/build-angular@17.0.7
+
+RUN ng build --configuration=production --output-path=/dist/frontend/browser --verbose
+\end{lstlisting}
+
+\paragraph{Final Image Stage}
+
+\begin{itemize}
+    \item \textbf{Base Image}: Uses \texttt{nginx:1.25.2-alpine} as the base image.
+    \item \textbf{Copying Build Artifacts}:
+    \begin{itemize}
+        \item Copies the built Angular application to \texttt{/usr/share/nginx/html}.
+        \item Copies the custom Nginx configuration file to \texttt{/etc/nginx/conf.d/default.conf}.
+    \end{itemize}
+    \item \textbf{Start Nginx}: The command \texttt{CMD ["nginx", "-g", "daemon off;"]} starts Nginx with the daemon turned off.
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption=Frontend Final Image Dockerfile, label={lst:frontend_final_image_dockerfile}]
+#####################################################################
+## Final image
+#####################################################################
+FROM nginx:1.25.2-alpine
+
+COPY --from=build-step /app/dist/frontend/browser/browser/ /usr/share/nginx/html
+COPY --from=build-step /app/nginx.conf /etc/nginx/conf.d/default.conf
+
+CMD [ "nginx", "-g", "daemon off;"]
+\end{lstlisting}
+
+
+\subsubsection{Docker Compose}
+The \texttt{frontend} service in the Docker Compose file (Listing \ref{lst:frontend_docker_compose}) is configured to deploy the frontend in a containerized setup. Each directive in this section is tailored to ensure the efficient operation of the frontend service:
+
+\begin{itemize}
+    \item \textbf{Build:}: \\ \verb|./frontend| \\ This command indicates that the Docker image for the frontend service should be built using the Dockerfile located in the \texttt{./frontend} directory. This directory contains all necessary files for building the Docker image of the frontend application.
+
+    \item \textbf{Container Naming:} \\ \verb|frontend| \\ Assigns the name \texttt{frontend} to the container. This name is used to identify and reference the container within the Docker environment.
+
+    \item \textbf{Restart Policy:} \\ \verb|always| \\ Specifies that the container should automatically restart if it ever stops unexpectedly. This setting is crucial for maintaining the availability of the frontend service.
+
+    \item \textbf{Port:} \\ \verb|"${FRONTEND_PORT}:80"| \\ Maps the internal port 80 of the container to an external port defined by the \texttt{\$\{FRONTEND\_PORT\}} environment variable. Port 80 is the default port for HTTP.
+
+    \item \textbf{Networks:} Places the container on the user-defined network named \texttt{network} and sets a static IPv4 address for the container, defined by the \texttt{\$\{FRONTEND\_IP\}} environment variable. In this case \texttt{172.1.0.17} is specified as the container's IP address.
+\end{itemize}
+
+Through this configuration the \texttt{frontend} service is set up to provide the user interface of the application. It ensures the service's accessibility over the network and maintains consistent networking configuration for better service management and reliability.
+
+
+\begin{lstlisting}[language=bash, caption=Frontend Docker Compose, label={lst:frontend_docker_compose}]
+frontend: 
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT}:80"
+    networks:
+      network:
+        ipv4_address: ${FRONTEND_IP} # 172.1.0.17
+\end{lstlisting}
+
+\subsection{Nginx Configuration}
+
+The Nginx configuration (Listing \ref{lst:frontend_nginx_configuration}) is set up as basic web server and is made up of these key components:
+
+\begin{itemize}
+    \item \textbf{Server Block}: The configuration defines a server block.
+    \begin{itemize}
+        \item \texttt{listen 80;}: Specifies that the server listens on port 80, the default port for HTTP.
+        \item \texttt{server\_name localhost;}: Sets the server name that matches the \texttt{localhost} domain.
+    \end{itemize}
+    \item \textbf{Location Block} (\texttt{location /}):
+    \begin{itemize}
+        \item \texttt{root /usr/share/nginx/html;}: Specifies the root directory for requests, where Nginx will look for files to serve.
+        \item \texttt{index index.html index.htm;}: Sets the index file that Nginx will serve if a directory is requested. It tries \texttt{index.html} first, then \texttt{index.htm}.
+        \item \texttt{try\_files \$uri \$uri/ /index.html;}: The directive checks for the existence of files in the order listed. It first tries the exact URI, then the URI as a directory, and finally falls back to \texttt{/index.html}. This is useful for single-page applications that handle routing on the client side.
+    \end{itemize}
+    \item \textbf{Error Page Handling}:
+    \begin{itemize}
+        \item \texttt{error\_page 500 502 503 504 /50x.html;}: Specifies the error page for HTTP errors 500, 502, 503, and 504, pointing to \texttt{/50x.html}.
+        \item The subsequent \texttt{location} block for \texttt{/50x.html} defines the root directory for the specific error page.
+    \end{itemize}
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption=Frontend Nginx Configuration, label={lst:frontend_nginx_configuration}]
+server {
+    listen 80;
+    server_name localhost;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+\end{lstlisting}
+
+\section{Model Tuning}
+The model tuning jupyter notebook is currently only executed locally, mainly due to challenges in hosting a jupyter notebook server which is able to integrate with the Nvidia CUDA Toolkit \cite{NVIDIACUDAToolkit}. The complexity arises from the intricate setup and configuration required for CUDA within containers, ensuring compatibility and performance. Local execution sidesteps these hurdles, offering a more direct and stable environment for model tuning, especially where precise control over GPU resources and dependencies is crucial. While this approach is not ideal it proved effective during the development phase.
+
+
+\section{Docker Environment Configuration}
+\label{docker_config_env}
+
+In the context of Dockerized applications, the implementation of a centralized configuration management system is crucial. The architecture employs a \texttt{config.env} file (Listing \ref{lst:docker_config_env}) to manage environment variables and settings across various services including PostgreSQL, pgAdmin4, MLflow, MinIO, and the frontend and backend components.
+
+\begin{itemize}
+    \item \textbf{Centralized Configuration:} The use of a single \texttt{config.env} file enables centralization of configuration settings for the entire application, which significantly eases the management and review process of settings across diverse components (\textit{PostgreSQL, pgAdmin4, MLflow, MinIO}), thereby streamlining the configuration process.
+    \item \textbf{Security Considerations:} Sensitive data such as usernames, passwords, and access keys are securely stored within the \texttt{config.env} file. This method is a pivotal security measure as it prevents the inclusion of sensitive data directly in image builds or source code repositories, thus safeguarding the information.
+    \item \textbf{Maintenance Efficiency: } Maintenance and updates of configurations are simplified as modifications are consolidated to a single file. The centralization proves advantageous over the alteration of multiple docker-compose files or Dockerfiles, particularly in complex applications.
+    \item \textbf{Environment Specific Configurations: } The architecture allows for seamless transitions between different operational environments (development, testing, production) by employing distinct configuration files for each environment (e.g., \texttt{config.dev.env}, \texttt{config.prod.env}). Flexibility is instrumental in maintaining environment-specific settings without disrupting the overall configuration structure.
+    \item \textbf{Integration with Docker-compose:} The integration of the \texttt{.env} file with Docker-compose is a notable feature, because it allows for the direct integration of the environment variables into the containers.
+    \item \textbf{Clarity and Documentation:} The \texttt{config.env} file not only serves as a configuration tool but also as a form of documentation. It clearly delineates the configurations in use and can include annotations explaining the purpose and function of each variable.
+    \item \textbf{Scalability:} As the application evolves, the centralized configuration file adeptly accommodates the complexity of additional services or components. Scalability is paramount in managing more intricate setups efficiently.    
+\end{itemize}
+
+\begin{lstlisting}[language=bash, caption=Docker Configuration File, label={lst:docker_config_env}]
+# Docker Config File 
+
+# network
+TIMESCALE_IP=172.1.0.10
+PG_ADMIN_IP=172.1.0.11
+MINIO_IP=172.1.0.12
+MLFLOW_IP=172.1.0.13
+BACKEND_IP=172.1.0.14
+MODELSERVICE_IP=172.1.0.15
+FRONTEND_IP=172.1.0.17
+
+# Backend
+BACKEND_PORT = 8000
+
+# Frontend
+FRONTEND_PORT=4200
+
+# Model Execution Service 
+MODELSERVICE_PORT=7000
+MODELSERVICE_ENDPOINT = execute
+
+# postgres configuration
+PG_USER='admin'
+PG_PASSWORD='password'
+PG_DATABASE='db'
+PG_DATABASE_MLFLOW='mlflow'
+PG_PORT=5432
+
+# pgadmin4 configuration
+PGADMIN_DEFAULT_EMAIL=some@email.com
+PGADMIN_DEFAULT_PASSWORD=password
+PGADMIN_PORT=5050
+
+# MLflow configuration
+MLFLOW_PORT=5000
+MLFLOW_BUCKET_NAME=mlflow-models
+MLFLOW_BUCKET_PROD=prod-model
+MLFLOW_S3_ENDPOINT_URL=http://s3:2000
+
+# MinIO access keys 
+MINIO_ACCESS_KEY=eITEO5kyE7hccuy7UTHv
+MINIO_SECRET_ACCESS_KEY=5KBCscit30Z70bSVGIMvMBBoqV8ydn232o2MW9RA
+
+# MinIO configuration
+MINIO_ROOT_USER=minio_root_user
+MINIO_ROOT_PASSWORD=minio_password
+MINIO_ADDRESS=':2000'
+MINIO_STORAGE_USE_HTTPS=False
+MINIO_CONSOLE_ADDRESS=':2001'
+MINIO_PORT=2000
+MINIO_CONSOLE_PORT=2001
+
+
+\end{lstlisting}
+
+In conclusion the adoption of a \texttt{config.env} file in a Dockerized environment is a strategic approach that enhances security, simplifies maintenance, and provides a clear, scalable method for managing configurations across all components of the application. 

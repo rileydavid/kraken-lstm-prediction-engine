@@ -1,0 +1,14 @@
+		%Please consider the following section of the "Formvorschriften für die gedruckte Version"
+	%Im Anhang ist eine Zusammenfassung (Abstract) mitzubinden. 
+	%Ist die Arbeit in einer Fremdsprache verfasst, ist im Anhang jedenfalls eine deutsche Zusammenfassung mitzubinden.
+\chapter{Abstract}
+
+Accurately inferring cryptocurrency prices is paramount for informed decision-making by traders and investors. This research introduces an innovative framework that unites advanced machine learning techniques, comprehensive data analysis, and a robust technological infrastructure to forecast hourly closing prices of cryptocurrencies. \\
+
+The framework operates a continuous data pipeline, collecting, pre-processing, and analyzing real-time market data from the Kraken crypto exchange API. Data is transformed into Open-, High-, Low-, Close-Price (OHLC) formats, integrating volume and trade count metrics for a comprehensive analysis. \\
+
+At the core is a Long Short-Term Memory (LSTM) algorithm, enriched with traditional financial indicators, trained and fine-tuned to infer hourly closing prices. The employment of TimescaleDB ensures efficient data storage and retrieval, while MLflow provides rigorous tracking of model metrics and architectures, paving the way for continuous refinement. Additionally, MinIO offers a scalable solution for secure artifact storage. \\
+
+The architecture, with a Rust-based backend and Python-based web server, ensures high performance and real-time model execution. A user-friendly frontend offers traders and investors intuitive access to analytical insights and predictions. \\
+
+Although promising, the framework remains in a stage of continuous improvement, serving as a solid foundation for advancing cryptocurrency price prediction models. This research represents a contribution to the field, providing a sophisticated toolset designed to assist traders, investors, and researchers in refining their decision-making process. \\ 

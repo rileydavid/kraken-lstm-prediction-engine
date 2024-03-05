@@ -1,0 +1,126 @@
+\chapter{State of the Art}
+\section{Time Series Forecasting}
+Time series forecasting is a critical component in numerous fields including economics, meteorology, and business analytics. It involves predicting future values based on previously observed values, allowing for informed decision-making. The significance of time series analysis lies in its ability to identify patterns and trends over time, making it indispensable for planning, budgeting, and risk management in various sectors. \\
+
+The following sections should provide an overview of the State of the Art in Time Series Forecasting, tracing its evolution from traditional statistical methods to modern machine learning and deep learning techniques. It aims to delineate the historical development of the field, highlighting pivotal advancements and their impact on the practice of forecasting. \\
+
+\subsection{Pre Machine Learning Era}
+
+\subsubsection{Statistical Methods \cite{cowpertwait2009introductory}}
+In the era preceding the widespread adoption of machine learning, time series forecasting was primarily rooted in statistical methods. Some foundational techniques include:
+
+\begin{itemize}
+    \item \textbf{Moving Averages}: This method involves calculating the average of data points within a specific window that moves along with the time series. This helps smooth out short-term fluctuations and highlights long-term trends or cycles.
+    
+    \item \textbf{Exponential Smoothing}: A refinement of moving averages, exponential smoothing assigns exponentially decreasing weights to older observations. This method is particularly effective for data with no clear trend or seasonal pattern.
+    
+    \item \textbf{Autoregressive (AR) Models}: These models predict future behavior based on past values. An autoregressive model of order \( p \), denoted as AR(p), uses the past \( p \) observations to make forecasts.
+
+     \item \textbf{Moving Average (MA) Models}: MA models focus on the concept of white noise. An MA model of order \( q \), denoted as MA(q), uses the past \( q \) white noise terms (random shocks) in the time series for forecasting.
+    
+    \item \textbf{Autoregressive Integrated Moving Average (ARIMA)}: ARIMA models represent a synthesis and extension of AR and MA models. They are denoted as ARIMA(p, d, q), where \( p \) is the order of the autoregressive part, \( d \) is the degree of differencing needed to make the time series stationary, and \( q \) is the order of the moving average part. The key feature of ARIMA is its ability to integrate differencing into the forecasting model, making it suitable for non-stationary data, a common characteristic in real-world time series. This ability to handle non-stationary data directly, without the need for transformation, makes ARIMA one of the most versatile and widely used forecasting methods. Stationary time series has statistical properties (e.g., mean and variance) that do not vary over time, where as in non-stationarity time series data the underlying statistical properties are changing over time.
+\end{itemize}
+
+These methods laid the groundwork for more advanced forecasting techniques and were fundamental in handling time series data before the advent of machine learning.
+
+\subsection{Machine Learning Era}
+\subsubsection{Early Adoption of Machine Learning}
+The introduction of machine learning into time series forecasting marked the beginning of a significant shift from traditional statistical methods. Initially this field started out with:
+
+\begin{itemize}
+    \item \textbf{Support Vector Machines (SVM)}: SVMs were among the first machine learning techniques applied to time series forecasting, prized for their ability to handle both linear and non-linear relationships in data.
+    \item \textbf{Random Forests}: This method employs an ensemble of decision trees to produce more accurate and robust forecasting results than a single model, especially effective in capturing complex, non-linear relationships in time series data.
+\end{itemize}
+
+\subsubsection{Advancements in Deep Learning}
+Following the early adoption of machine learning, the field witnessed a surge in more advanced techniques, particularly with the introduction of deep learning:
+
+\begin{itemize}
+    \item \textbf{Neural Networks}: The use of various neural network architectures, initially simple feedforward networks, and later more complex designs, marked a significant advancement in forecasting accuracy and capability.
+    \item \textbf{Recurrent Neural Networks (RNN)}: Designed to process sequential data, RNNs were a natural fit for time series forecasting, handling temporal dynamics effectively.
+    \item \textbf{Long Short-Term Memory (LSTM)}: LSTMs, an evolution of RNNs, were particularly impactful in overcoming the challenge of learning long-term dependencies, making them a popular choice for complex time series forecasting tasks.
+\end{itemize}
+
+
+\subsubsection{Autoformer \cite{wu2022autoformer}}
+
+The \textbf{Autoformer} model is an advanced adaptation of the Transformer architecture, specifically designed for time series forecasting. Its main features include:
+
+\begin{itemize}
+    \item \textbf{Self-Attention Mechanism}: Transformers use a self-attention mechanism that allows them to consider the entire input sequence at once and weigh the importance of different parts, facilitating the capture of long-range dependencies within the data.
+    
+    \item \textbf{Parallel Processing}: Unlike traditional sequential models, Transformers process entire data sequences in parallel, significantly improving training efficiency and model scalability.
+\end{itemize}
+
+\paragraph{Key Innovations:}
+\begin{itemize}
+    \item \textbf{Autocorrelation Mechanism}: Substitutes standard dot-product self-attention with a mechanism adept at identifying frequency-based dependencies, ideal for periodic time series.
+    
+    \item \textbf{Time Delay Aggregation}: Aligns value states across time delays, merging them with autocorrelations for refined temporal information synthesis.
+    
+    \item \textbf{Efficient Computations}: Employs Fast Fourier Transformations (FFT) in auto-correlation calculations, optimizing performance for extensive time series.
+    
+    \item \textbf{Customizable Parameters}: Allows precise model tuning through adjustable prediction length, context length, and attention dropout, catering to specific forecasting requirements.
+\end{itemize}
+
+These advancements in Autoformer models represent the cutting edge in time series forecasting, capable of handling complex patterns and dependencies.
+
+\subsection{Conclusion}
+The integration of machine learning into time series forecasting has triggered a remarkable evolution, transitioning from initial techniques like SVM and Random Forests to highly sophisticated deep learning architectures. This journey underscores the dynamic and ever-evolving nature of the field, reflecting the escalating complexity and nuanced capabilities required for modern time series analysis. Notably, the adoption of Transformer models, and the subsequent development of the Autoformer, represent a significant leap forward. These advancements showcase the field's progression towards models capable of capturing intricate patterns and long-term dependencies with unprecedented efficiency and accuracy. As time series forecasting continues to advance, it is poised to tackle increasingly complex challenges, demonstrating the pivotal role of machine learning and deep learning in shaping the future of this domain.
+
+% Source
+% https://huggingface.co/blog/autoformer
+
+\section{Technology Stack}
+
+\subsection{Introduction}
+In the realm of time series forecasting, the establishment of a comprehensive technology stack is pivotal. It should orchestrate the seamless flow of data from its initial collection through to the final predictive analysis, ensuring efficiency and accuracy at each stage of the process. Equally crucial is the scalability of these systems, as they must be adept at handling the escalating volumes of data, as well as the ever-increasing inflow without compromising on performance or accuracy.
+
+\subsection{Micro-Services}
+A typical approach to handling time series data is the micro service architecture, with a central focus on the database, serving as the hub for data storage, aggregation, and processing. This method involves:
+
+\begin{itemize}
+    \item \textbf{Database-Centric}: The database not only stores data but also often handles key aspects of data processing. This includes tasks like data aggregation and transformation and therefore plays a key role in the technology stack. 
+    \item \textbf{Surrounding Micro-services}: A suite of micro-services is typically built around the database. These services handle specific tasks such as:
+    \begin{itemize}
+        \item Data Collection: Gathering time series data from various sources and feeding it into the database.
+        \item Data Transformation and Pre-processing: Cleaning and preparing the data for analysis, which might involve normalization, handling missing values, and time alignment.
+        \item Additional Analytics: Performing more complex analytics that are not suitable for in database processing.
+    \end{itemize}
+
+    \item \textbf{Data Pipeline Tools}: For data processing, there are distinct categories of tools optimized for specific tasks. On one hand, there are tools designed for batch processing, such as Apache Airflow \cite{apache_airflow}, which are ideal for orchestrating and automating workflows in a scheduled, sequential manner. On the other hand, for real-time data streaming, tools like Apache Kafka \cite{kafka_website} are preferred, facilitating continuous, instantaneous processing and transmission of data streams. These tools ensure that both batch and streaming data needs are efficiently addressed, maintaining data integrity and ensuring timely data availability for diverse applications.
+
+    \item \textbf{Challenges and Limitations}: While this approach offers flexibility and a unified data repository, it might face challenges in scalability and the ever growing complexity, especially with the growing volume of data and micro-services. Another aspect that should not be overlooked is the overhead from data transfers. As data moves between various stages of the pipeline, such as from collection to storage to processing, these transfers can introduce significant latency and resource consumption, impacting the overall system efficiency and performance.
+
+\end{itemize}
+
+This approach has been the backbone of many machine learning systems, providing a stable and reliable framework. However, as more advanced technologies and approaches emerge, there could be a shift towards more sophisticated architectures. While the micro-service architecture offers a high degree of control and coordination in managing data flows, it also brings forth challenges in terms of setup complexity and the need for specialized expertise to optimize their functionality and the flow of data.
+
+\subsection{Databricks and MLFlow}
+
+Databricks \cite{databricks_website} in conjunction with MLFlow \cite{MLflowWeb} stands as a pivotal component in the contemporary technology stack for machine learning. A key strength of Databricks is its compatibility and ease of integration with existing infrastructure, allowing organizations to leverage their current investments effectively. MLFlow complements this by offering a robust suite of tools for experiment tracking, model management, and deployment. Together, Databricks and MLFlow enable:
+
+\begin{itemize}
+    \item \textbf{Scalable Machine Learning Pipelines:} Databricks excels in handling large-scale data operations, offering seamless integration with a variety of data sources and processing frameworks. This scalability is crucial for businesses looking to expand their machine learning capabilities without overhauling their existing systems.
+    \item \textbf{Advanced Analytics with Infrastructure Compatibility:} Databricks facilitates the development of complex models, harnessing its optimized Spark \cite{ApacheSpark} environment for high-performance analytics, while ensuring compatibility with the existing infrastructure.
+    \item \textbf{Streamlined Workflow and Infrastructure Synergy}: MLFlow's tracking and management tools, along with Databrick's unified analytics platform, ensure smooth development-to-production transitions, enhancing reproducibility and governance, all while aligning with the organization's existing tech stack.
+\end{itemize}
+
+This combination of Databricks and MLFlow empowers organizations to accelerate their machine learning lifecycle, from experimentation to deployment, harmonizing new technological capabilities with their established infrastructure.
+
+\subsection{PostgresML}
+
+PostgresML \cite{postgresml_website} is at the forefront of innovative machine learning solutions. It  notably excels in the efficient training, deployment, and prediction processes associated with large language models (LLMs). Although time series forecasting is not currently supported, it is on the road-map, promising further versatility. The recent advancements of PostgresML offer a valuable insight and foreshadow its expanding role in the field. Key aspects include:
+
+\begin{itemize}
+    \item \textbf{In-Database Machine Learning Potential}: The successful training of complex models such as LLMs directly within the database environment showcases PostgresML’s potential for more advanced applications, including time series forecasting. This in-database approach paves the way for more sophisticated machine learning tasks, directly leveraging the power of the underlying database system.
+    \item \textbf{Streamlining of Data Operations}: PostgresML's proficiency in managing and processing large datasets for LLMs is indicative of its future capabilities in handling time series data. This demonstrates the system's readiness to accommodate complex, data-intensive operations, streamlining the pathway from data storage to insightful analytics.
+    \item \textbf{Accessible Machine Learning}: By providing a SQL interface for model training and deployment, PostgresML introduces access to advanced machine learning techniques. This user-friendly approach is poised to transform time series forecasting, making it more accessible to a broader range of users.
+\end{itemize}
+
+This evolution of PostgresML signifies a paradigm shift in integrating machine learning with conventional data management systems. Such integration is going to streamline analytical workflows significantly, enhancing efficiency by minimizing network transfer overhead and simplifying the coordination of various data sources.
+
+\subsection{Conclusion}
+The exploration of various technology stacks in the domain of time series forecasting highlights an evolving landscape in data processing and machine learning. 
+Significant transformations are reshaping the field, transitioning away from traditional micro-service architectures known for their flexibility but hampered by challenges in orchestration, scalability, and data transfer overheads. Instead, the focus is shifting towards innovative frameworks such as Databricks and MLFlow, which provide scalable, high-performance solutions tailored for complex machine learning task. Additionally, the emergence of innovative platforms like PostgresML, with its potential for in-database machine learning, signifies a paradigm shift towards more integrated and user-friendly systems. These developments not only enhance the capabilities in time series forecasting but also pave the way for more efficient, accessible, and powerful machine learning architectures. As technology continues to advance, the focus will increasingly be on optimizing these stacks for greater performance, flexibility, and ease of use, ensuring that they can meet the growing demands of data-driven insights in various sectors.
+
