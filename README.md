@@ -1,8 +1,11 @@
 # Trading
 
+# Web Interface: 
+![](documentation/latex/figures/frontend_dashboard.png)
+
 # Please refer to the User Guide:
-The User Guide outline the setup process and necessary steps for running this apllication.
-The guide is locate in the documentation folder in the pdf "Bachelor_Thesis_Riley_David_2024.pdf" 
+The User Guide outlines the setup process and necessary steps for running this application.
+The guide is located in the documentation folder in the pdf "Bachelor_Thesis_Riley_David_2024.pdf" 
 and can be found in Chapter 5.
 
 # How to launch: 
