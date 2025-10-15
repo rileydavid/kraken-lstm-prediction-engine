@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS trade (
 );
 
 -- index for better query performance (get_trades_range)
-CREATE INDEX idx_trade_symbol_id ON trade (time, symbol_id);
+CREATE INDEX idx_trade_symbol_id ON trade (symbol_id, time DESC);
 
 -- hyper table
 SELECT create_hypertable('trade', 'time', migrate_data => true);
@@ -71,36 +71,34 @@ BEGIN
 END;$$;
 
 -- Example: SELECT * FROM get_trades_range('2023-01-01 00:00:00+00', '2023-12-31 23:59:59+00', 1);
-CREATE OR REPLACE FUNCTION get_trades_range (
+CREATE OR REPLACE FUNCTION get_trades_range(
     input_from_date TIMESTAMPTZ,
     input_to_date TIMESTAMPTZ,
-    input_symbol_id INTEGER 
+    input_symbol_id INTEGER
 )
 RETURNS TABLE (
     time_ TIMESTAMPTZ,
     price DOUBLE PRECISION,
     volume DOUBLE PRECISION,
     side VARCHAR(1),
-    order_type VARCHAR(1), 
+    order_type VARCHAR(1),
     symbol_id INTEGER
 )
-LANGUAGE plpgsql    
+LANGUAGE sql
+STABLE
 AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        trade.time,
-        trade.price,
-        trade.volume,
-        trade.side,
-        trade.order_type, 
-        trade.symbol_id
-    FROM trade 
-    WHERE trade.symbol_id = input_symbol_id 
-    AND trade.time >= input_from_date
-    AND input_to_date >= trade.time
-    ORDER BY trade.time; 
-END;$$;
+SELECT
+    time,
+    price,
+    volume,
+    side,
+    order_type,
+    symbol_id
+FROM trade
+WHERE symbol_id = $3
+  AND time BETWEEN $1 AND $2
+ORDER BY time;
+$$;
 
 -- create ohlc (open, high, low, close) table for hour
 -- finalized=TRUE --> only data that is fully aggregated is returned (full hours only)

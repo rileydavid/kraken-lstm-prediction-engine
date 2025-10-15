@@ -14,6 +14,8 @@ use tracing::{error, info};
 use tungstenite::{connect, stream::MaybeTlsStream, Message, WebSocket};
 use utils::{core::postgresdb, error::generic_error::GenericError};
 
+use std::time::Duration;
+
 use rayon::prelude::*;
 
 use tokio::sync::mpsc::Receiver;
@@ -43,6 +45,8 @@ async fn websocket_loop(
     socket = subscribe(socket, symbols.keys().cloned().collect()).await;
 
     loop {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
         let sub_msg = receiver.try_recv();
 
         if sub_msg.is_ok() {
