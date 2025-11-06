@@ -128,6 +128,10 @@ Curiosity-driven exploration expanded the project scope as additional features w
 
 An elusive performance bottleneck was ultimately traced to a tight loop in the Kraken WebSocket data collector monopolizing CPU resources. This reinforced the value of early instrumentation and validating system-level performance assumptions before deeper architectural debugging.
 
+### Docker Networking Optimization
+
+The architecture initially relied on hard-coded container IPs, which worked but created brittle network dependencies. A more sustainable approach would be to use Docker’s automatic DNS-based service discovery (container hostnames), allowing services to communicate reliably without manual IP management. This would improve portability, reduce configuration overhead, and eliminate the need to maintain static IP assignments across environments.
+
 ### What Went Well
 
 Established a modular experimental pipeline integrating streaming data ingestion, experiment tracking, and deployable inference - creating a scalable foundation for future work.
