@@ -1,0 +1,32 @@
+# LaTeX build files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.glo
+*.glg
+*.gls
+*.glsdefs
+*.ist
+*.lof
+*.log
+*.lol
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xmpi
+*.acn 
+*.log
+*.pdf
+
+# TeXShop/TexStudio/VSCode temporary files
+*.synctex*
+*.nav
+*.snm
+
+# Very common LaTeX temp file
+texput.*
